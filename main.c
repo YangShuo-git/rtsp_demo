@@ -120,6 +120,15 @@ static int rtp_decode_packet(void* param, const void *packet, int bytes, uint32_
 int main()
 {
     printf("main function!\n");
+
+    uint16_t val = 32950;
+    uint8_t ptr[2] = {0};
+    ptr[0] = (uint8_t)(val >> 8);
+    ptr[1] = (uint8_t)(val);
+    printf("%d\n", ptr[0]);
+    printf("%d\n", ptr[1]);
+
+
     return 0;
     #if 0
     FILE *bits = open_bitstream_file("phone.h264");//打开264文件，并将文件指针赋给bits,在此修改文件名实现打开别的264文件。

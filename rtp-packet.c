@@ -100,12 +100,12 @@ int rtp_packet_deserialize(struct rtp_packet_t *pkt, const void* data, int bytes
 int rtp_packet_serialize_header(const struct rtp_packet_t *pkt, void* data, int bytes)
 {
     int hdrlen;
-    uint32_t i;
     uint8_t* ptr;
 
+    // RTP version field must equal 2 (p66)
     if (RTP_VERSION != pkt->rtp.v || 0 != (pkt->extlen % 4))
     {
-        assert(0); // RTP version field must equal 2 (p66)
+        assert(0); 
         return -1;
     }
 
@@ -119,7 +119,7 @@ int rtp_packet_serialize_header(const struct rtp_packet_t *pkt, void* data, int 
     ptr += RTP_FIXED_HEADER;
 
     // pkt contributing source
-    for (i = 0; i < pkt->rtp.cc; i++, ptr += 4)
+    for (int i = 0; i < pkt->rtp.cc; i++, ptr += 4)
     {
         nbo_w32(ptr, pkt->csrc[i]);     // csrc列表封装到头部
     }
