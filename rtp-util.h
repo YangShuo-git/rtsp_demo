@@ -3,7 +3,7 @@
 
 #include "rtp-header.h"
 
-// The Internet Protocol defines big-endian as the standard network byte order
+// 网络协议定义大端序为标准网络字节序 nbo是网络字节序
 #define nbo_r16 rtp_read_uint16
 #define nbo_r32 rtp_read_uint32
 #define nbo_w16 rtp_write_uint16
