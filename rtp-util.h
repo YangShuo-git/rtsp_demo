@@ -19,7 +19,6 @@ static inline uint32_t rtp_read_uint32(const uint8_t* ptr)
     return (((uint32_t)ptr[0]) << 24) | (((uint32_t)ptr[1]) << 16) | (((uint32_t)ptr[2]) << 8) | ptr[3];
 }
 
-
 // 如何将val写入ptr数组中
 static inline void rtp_write_uint16(uint8_t* ptr, uint16_t val)
 {

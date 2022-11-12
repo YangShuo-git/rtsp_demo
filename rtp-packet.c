@@ -22,12 +22,15 @@
 // 通过收到的数据，解析出来可读的RTP packet 也就是反序列化
 int rtp_packet_deserialize(struct rtp_packet_t *pkt, const void* data, int bytes)
 {
-    uint32_t i, v;
+    uint32_t v;
     int hdrlen;
     const uint8_t *ptr;
 
-    if (bytes < RTP_FIXED_HEADER) // RFC3550 5.1 RTP Fixed Header Fields(p12)
+    if (bytes < RTP_FIXED_HEADER)
+    {
         return -1;
+    }
+
     ptr = (const unsigned char *)data;
     memset(pkt, 0, sizeof(struct rtp_packet_t));
 
@@ -46,17 +49,19 @@ int rtp_packet_deserialize(struct rtp_packet_t *pkt, const void* data, int bytes
 
     hdrlen = RTP_FIXED_HEADER + pkt->rtp.cc * 4;    // 解析带csrc时的总长度
     if (RTP_VERSION != pkt->rtp.v || bytes < hdrlen + (pkt->rtp.x ? 4 : 0) + (pkt->rtp.p ? 1 : 0))
+    {
         return -1;      // 报错
+    }
 
     // pkt contributing source
-    for (i = 0; i < pkt->rtp.cc; i++)
+    for (int i = 0; i < pkt->rtp.cc; i++)
     {
         pkt->csrc[i] = nbo_r32(ptr + 12 + i * 4);
     }
 
-    assert(bytes >= hdrlen);
-    pkt->payload = (uint8_t*)ptr + hdrlen;      // 跳过头部 拿到payload
-    pkt->payloadlen = bytes - hdrlen;           // payload长度
+    // 跳过头部 拿到payload与payloadlen；如果有拓展，则在下面减掉
+    pkt->payload = (uint8_t*)ptr + hdrlen;      
+    pkt->payloadlen = bytes - hdrlen;           
 
     // pkt header extension
     if (1 == pkt->rtp.x)
@@ -112,19 +117,23 @@ int rtp_packet_serialize_header(const struct rtp_packet_t *pkt, void* data, int 
     // RFC3550 5.1 RTP Fixed Header Fields(p12)
     hdrlen = RTP_FIXED_HEADER + pkt->rtp.cc * 4 + (pkt->rtp.x ? 4 : 0);
     if (bytes < hdrlen + pkt->extlen)
+    {
         return -1;
+    }
 
     ptr = (uint8_t *)data;
+
+    // write 12字节的 fixed header
     nbo_write_rtp_header(ptr, &pkt->rtp);
     ptr += RTP_FIXED_HEADER;
 
-    // pkt contributing source
+    // write CSRC
     for (int i = 0; i < pkt->rtp.cc; i++, ptr += 4)
     {
         nbo_w32(ptr, pkt->csrc[i]);     // csrc列表封装到头部
     }
 
-    // pkt header extension
+    // write header extension
     if (1 == pkt->rtp.x)
     {
         // 5.3.1 RTP Header Extension
