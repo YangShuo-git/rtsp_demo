@@ -6,7 +6,7 @@
 #include "rtp-param.h"
 #include "rtp-util.h"
 
-struct rtp_payload_encode_t
+struct rtp_payload_encode_t   
 {
     /// create RTP packer 创建一个封装器
     /// @param[in] size maximum RTP packet payload size(don't include RTP header)

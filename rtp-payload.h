@@ -32,7 +32,9 @@ struct rtp_payload_t        // 该结构体用来封装回调函数
 /// @param[in] handler user-defined callback functions
 /// @param[in] cbparam user-defined parameter
 /// @return NULL-error, other-ok
-void* rtp_payload_encode_create(int payload, const char* name, uint16_t seq, uint32_t ssrc, struct rtp_payload_t *handler, void* cbparam);
+void* rtp_payload_encode_create(int payload, const char* name, uint16_t seq, uint32_t ssrc, 
+                                struct rtp_payload_t *handler, void* cbparam);
+
 void rtp_payload_encode_destroy(void* encoder);
 
 /// Get rtp last packet sequence number and timestamp
@@ -50,6 +52,7 @@ void rtp_payload_encode_getinfo(void* encoder, uint16_t* seq, uint32_t* timestam
 int rtp_payload_encode_input(void* encoder, const void* data, int bytes, uint32_t timestamp);
 
 
+/////////////////////////////////////////////////////////////////////////////////////////////
 /// Create RTP packet decoder 创建不同的解封装器 (RTP -> H264 nalu; RTP -> AAC 帧)
 /// @param[in] payload RTP payload type, value: [0, 127] (see more about rtp-profile.h)
 /// @param[in] name RTP payload name
@@ -57,6 +60,7 @@ int rtp_payload_encode_input(void* encoder, const void* data, int bytes, uint32_
 /// @param[in] cbparam user-defined parameter
 /// @return NULL-error, other-ok
 void* rtp_payload_decode_create(int payload, const char* name, struct rtp_payload_t *handler, void* cbparam);
+
 void rtp_payload_decode_destroy(void* decoder);
 
 /// Decode RTP packet
@@ -66,6 +70,8 @@ void rtp_payload_decode_destroy(void* decoder);
 /// @return 1-packet handled, 0-packet discard, <0-failed
 int rtp_payload_decode_input(void* decoder, const void* packet, int bytes);
 
+
+/////////////////////////////////////////////////////////////////////////////////////////////
 /// Set/Get rtp encode packet size(include rtp header)
 void rtp_packet_setsize(int bytes);
 int rtp_packet_getsize(void);

@@ -106,7 +106,7 @@ static int rtp_h264_pack_nalu(struct rtp_encode_h264_t *packer, const uint8_t* n
     }
 
     ++packer->pkt.rtp.seq;
-    r = packer->handler.packet(packer->cbparam, rtp, n, packer->pkt.rtp.timestamp, 0); // 通过回调发送到应用层
+    r = packer->handler.packet(packer->cbparam, rtp, n, packer->pkt.rtp.timestamp, 0); // 通过回调函数发送到应用层
     packer->handler.free(packer->cbparam, rtp);
     return r;
 }
@@ -168,6 +168,7 @@ static int rtp_h264_pack_fu_a(struct rtp_encode_h264_t *packer, const uint8_t* n
 
     return r;
 }
+
 // 这里的h264数据带了startcode
 static int rtp_h264_pack_input(void* pack, const void* h264, int bytes, uint32_t timestamp)
 {
@@ -175,7 +176,7 @@ static int rtp_h264_pack_input(void* pack, const void* h264, int bytes, uint32_t
     const uint8_t *p1, *p2, *pend;
     struct rtp_encode_h264_t *packer;
     packer = (struct rtp_encode_h264_t *)pack;
-//	assert(packer->pkt.rtp.timestamp != timestamp || !packer->pkt.payload /*first packet*/);
+    //assert(packer->pkt.rtp.timestamp != timestamp || !packer->pkt.payload /*first packet*/);
     packer->pkt.rtp.timestamp = timestamp; //(uint32_t)time * KHz; // ms -> 90KHZ
 
     pend = (const uint8_t*)h264 + bytes;
@@ -192,14 +193,14 @@ static int rtp_h264_pack_input(void* pack, const void* h264, int bytes, uint32_t
         if (p2 != pend) --nalu_size;
         while(0 == p1[nalu_size-1]) --nalu_size;
 
-        if(nalu_size + RTP_FIXED_HEADER <= (size_t)packer->size)        // 小于等于payload size的
+        if(nalu_size + RTP_FIXED_HEADER <= (size_t)packer->size)    // 小于等于payload size的
         {
             // single NAl unit packet
             r = rtp_h264_pack_nalu(packer, p1, (int)nalu_size);     // 直接打包
         }
         else
         {
-            r = rtp_h264_pack_fu_a(packer, p1, (int)nalu_size);
+            r = rtp_h264_pack_fu_a(packer, p1, (int)nalu_size);     // FU-A打包
         }
     }
 
@@ -208,6 +209,7 @@ static int rtp_h264_pack_input(void* pack, const void* h264, int bytes, uint32_t
 
 struct rtp_payload_encode_t *rtp_h264_encode()
 {
+    // 在这里是给回调函数赋值了(可重入)
     static struct rtp_payload_encode_t packer = {
         rtp_h264_pack_create,
         rtp_h264_pack_destroy,

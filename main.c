@@ -128,7 +128,6 @@ int main()
     printf("%d\n", ptr[0]);
     printf("%d\n", ptr[1]);
 
-
     return 0;
     #if 0
     FILE *bits = open_bitstream_file("phone.h264");//打开264文件，并将文件指针赋给bits,在此修改文件名实现打开别的264文件。

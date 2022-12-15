@@ -8,7 +8,9 @@ ADD_DEFINITIONS( -g -W -Wall -D_REENTRANT -D_FILE_OFFSET_BITS=64 -DAC_HAS_INFO
 
 aux_source_directory(. DIR_SRCS)
      
-add_executable(rtp_h264 ${DIR_SRCS})
+# add_executable(rtp_h264 ${DIR_SRCS})
+add_executable(rtp_h264 main.c)
+
 
 
 

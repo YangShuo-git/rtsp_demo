@@ -3,7 +3,7 @@
 
 #include "rtp-header.h"
 
-#define RTP_FIXED_HEADER 12     // RTP固定 header的长度  12 byte
+#define RTP_FIXED_HEADER 12     // RTP固定header的长度  12byte
 
 // 封装这个RTP 包括 header + [csrc/extension] + payload
 struct rtp_packet_t     
