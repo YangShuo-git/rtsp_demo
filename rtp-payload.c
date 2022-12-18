@@ -8,7 +8,7 @@
 
 #define TS_PACKET_SIZE 188
 
-struct rtp_payload_delegate_t           // 代理结构体
+struct rtp_payload_delegate_t     // 代理结构体
 {
     struct rtp_payload_encode_t* encoder;
     struct rtp_payload_decode_t* decoder;
@@ -65,7 +65,7 @@ void rtp_payload_encode_getinfo(void* encoder, uint16_t* seq, uint32_t* timestam
 /**
  * @brief rtp_payload_encode_input 这里是通用的接口   在这里注册了重要的回调函数
  * @param encoder
- * @param data      data具体是什么媒体类型的数据，接口不关注，具体由ctx->encoder->input去处理
+ * @param data      data具体是什么媒体类型的数据，接口不关注，具体由ctx->encoder->input去处理 (rtp_h264_pack_input)
  * @param bytes
  * @param timestamp
  * @return

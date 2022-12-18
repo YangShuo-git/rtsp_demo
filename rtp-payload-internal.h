@@ -8,7 +8,10 @@
 
 struct rtp_payload_encode_t   
 {
-    /// create RTP packer 创建一个封装器
+    // 这里相当于是纯接口，在不同的编码格式下，可以给这四个接口赋予不同的函数，相当于复用（或者是可重入）
+    // 比如：H264 nalu -> RTP; AAC -> RTP
+
+    /// create RTP packer 创建一个RTP封装器
     /// @param[in] size maximum RTP packet payload size(don't include RTP header)
     /// @param[in] payload RTP header PT filed (see more about rtp-profile.h)
     /// @param[in] seq RTP header sequence number filed
@@ -33,6 +36,7 @@ struct rtp_payload_encode_t
 
 struct rtp_payload_decode_t
 {
+    // 比如： RTP -> H264 nalu; RTP -> AAC 帧
     void* (*create)(struct rtp_payload_t *handler, void* param);
     void (*destroy)(void* packer);
 

@@ -20,7 +20,7 @@ struct rtp_payload_t        // 该结构体用来封装回调函数
     void* (*alloc)(void* param, int bytes);
     void (*free)(void* param, void *packet);
 
-    /// @return 0-ok, other-error       拿到一帧完整的数据
+    /// @return 0-ok, other-error       拿到一帧完整的数据  回调函数 packetCallback
     int (*packet)(void* param, const void *packet, int bytes, uint32_t timestamp, int flags);
 };
 

@@ -207,6 +207,7 @@ static int rtp_h264_pack_input(void* pack, const void* h264, int bytes, uint32_t
     return r;
 }
 
+// 该函数返回一个结构体，该结构体包含4个回调函数，用来处理h264的RTP封装
 struct rtp_payload_encode_t *rtp_h264_encode()
 {
     // 在这里是给回调函数赋值了(可重入)
