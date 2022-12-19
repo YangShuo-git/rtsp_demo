@@ -12,8 +12,10 @@
 #include <sys/types.h>
 #include <arpa/inet.h>
 
+#include "rtp-payload.h"
+#include "h264-util.h"
 
-
+// 需要传输到回调函数中
 struct rtp_h264_test_t
 {
     int payload;                // payload type
@@ -24,13 +26,13 @@ struct rtp_h264_test_t
 
     char *in_file_name;             // H264文件名
     FILE* in_file;                  // H264裸流文件
-    float frame_rate;               // 帧率
-
-    void* encoder_h264;             // 封装
+    float frame_rate;               // 帧率  是手动设置的
+    void* encoder_h264;             // 封装回调函数
 
     char *out_file_name;
     FILE *out_file;
-    void* decoder_h264;             // 解封装
+    void* decoder_h264;             // 解封装回调函数
+
     uint8_t sps[40];
     int sps_len;
     uint8_t pps[10];
@@ -38,7 +40,6 @@ struct rtp_h264_test_t
     int got_sps_pps;
 };
 
-#if 0
 static void* rtp_alloc(void*  param, int bytes)
 {
     static uint8_t buffer[2 * 1024 * 1024 + 4] = { 0, 0, 0, 1, };   // 支持2M大小，不包括start code
@@ -109,7 +110,6 @@ static int rtp_decode_packet(void* param, const void *packet, int bytes, uint32_
     // check media file
     fwrite(buffer, 1, size, ctx->out_file);
 }
-#endif
 
 // 发送H264 RTP over UDP
 #define DEST_IP              "192.168.2.110"      // 支持成对方的ip地址
@@ -119,18 +119,7 @@ static int rtp_decode_packet(void* param, const void *packet, int bytes, uint32_
 
 int main()
 {
-    printf("main function!\n");
-
-    uint16_t val = 32950;
-    uint8_t ptr[2] = {0};
-    ptr[0] = (uint8_t)(val >> 8);
-    ptr[1] = (uint8_t)(val);
-    printf("%d\n", ptr[0]);
-    printf("%d\n", ptr[1]);
-
-    return 0;
-    #if 0
-    FILE *bits = open_bitstream_file("phone.h264");//打开264文件，并将文件指针赋给bits,在此修改文件名实现打开别的264文件。
+    FILE *bits = open_bitstream_file("phone.h264"); 
     if(!bits)
     {
         printf("open file failed\n");
@@ -149,11 +138,81 @@ int main()
     ctx.in_file = bits;             // 输入文件
     ctx.out_file = out_file;        // 输出文件
 
-    usleep(25000);
+    // H264 RTP encode回调
+    struct rtp_payload_t handler_rtp_encode_h264;
+    handler_rtp_encode_h264.alloc = rtp_alloc;
+    handler_rtp_encode_h264.free = rtp_free;
+    handler_rtp_encode_h264.packet = rtp_encode_packet;
 
+    const char* encoding = "H264";
+    ctx.payload = 96;
+    ctx.encoding = encoding;
+    ctx.encoder_h264 = rtp_payload_encode_create(ctx.payload, ctx.encoding, 1, 0x12345678, &handler_rtp_encode_h264, &ctx);
+
+    // H264 RTP decode回调
+    struct rtp_payload_t handler_rtp_decode_h264;
+    handler_rtp_decode_h264.alloc = rtp_alloc;
+    handler_rtp_decode_h264.free = rtp_free;
+    handler_rtp_decode_h264.packet = rtp_decode_packet;
+    ctx.decoder_h264 = rtp_payload_decode_create(ctx.payload, ctx.encoding, &handler_rtp_decode_h264, &ctx);
+
+    nalu_t *n = NULL;
+
+    ctx.frame_rate = 25;
+    unsigned int timestamp_increse=0;
+    unsigned int ts_current=0;
+    timestamp_increse=(unsigned int)(90000.0 / ctx.frame_rate); //+0.5);  //时间戳，H264的视频设置成90000
+
+
+    ctx.addr.sin_family = AF_INET;
+    ctx.addr.sin_addr.s_addr = inet_addr(DEST_IP);
+    ctx.addr.sin_port = htons(DEST_PORT);
+    ctx.fd = socket(AF_INET, SOCK_DGRAM, 0);
+#if 0
+    int ret = fcntl(ctx.fd , F_GETFL , 0);
+    fcntl(ctx.fd , F_SETFL , ret | O_NONBLOCK);
+#endif
+    ctx.addr_size =sizeof(ctx.addr);
+    // connect(ctx.fd, (const sockaddr *)&ctx.addr, len) ;//申请UDP套接字
+    n = alloc_nalu(2000000);//为结构体nalu_t及其成员buf分配空间。返回值为指向nalu_t存储空间的指针
+
+    while(!feof(bits))
+    {
+        int ret =get_annexb_nalu(n, bits);//每执行一次，文件的指针指向本次找到的NALU的末尾，下一个位置即为下个NALU的起始码0x000001
+        printf("read h264bitstram -> nal_unit_type:%d, unit_len:%d\n", n->nal_unit_type, n->len);
+
+        if(n->nal_unit_type == 7 && ctx.got_sps_pps == 0)
+        {
+            memcpy(ctx.sps, &n->buf[n->startcodeprefix_len], n->len - n->startcodeprefix_len);
+            ctx.sps_len =  n->len - n->startcodeprefix_len;
+        }
+        if(n->nal_unit_type == 8 && ctx.got_sps_pps == 0)
+        {
+            memcpy(ctx.pps, &n->buf[n->startcodeprefix_len], n->len - n->startcodeprefix_len);
+            ctx.pps_len =  n->len - n->startcodeprefix_len;
+            if(!ctx.got_sps_pps)
+            {
+                h264_sdp_create("h264.sdp", DEST_IP, DEST_PORT,
+                                ctx.sps, ctx.sps_len,
+                                ctx.pps, ctx.pps_len,
+                                ctx.payload, 90000, 300000);
+                ctx.got_sps_pps = 1;            // 只发送一次
+            }
+
+        }
+
+        ret = rtp_payload_encode_input(ctx.encoder_h264, n->buf, n->len, ts_current);
+        if(n->nal_unit_type != 7 &&
+            n->nal_unit_type != 8 &&
+            n->nal_unit_type != 6) {
+                ts_current = ts_current + timestamp_increse;   // 注意时间戳的完整一帧数据后再叠加（不是slice，一帧可能可能有多个slice）
+        }
+
+        // printf("ret:%d\n", ret);
+        usleep(25000);
+    }
 
     printf("close file\n");
     fclose(ctx.in_file);
     fclose(ctx.out_file);
-    #endif
 }

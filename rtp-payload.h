@@ -14,7 +14,7 @@ extern "C" {
 #define RTP_PAYLOAD_FLAG_PACKET_CORRUPT 0x0200 // the packet data is corrupt
 
 
-// 不管封包还是解包，调用者都是通过回调的方式来获取对应数据（重要的结构体）
+// 不管封包还是解包，调用者都是通过该结构体的回调函数来获取对应数据（重要的结构体）
 struct rtp_payload_t        // 该结构体用来封装回调函数
 {
     void* (*alloc)(void* param, int bytes);

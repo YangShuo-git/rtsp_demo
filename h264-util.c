@@ -223,7 +223,7 @@ void h264_sdp_create(uint8_t *file, uint8_t *ip, uint16_t port,
 
     char str_pps[100];
     memset(str_pps, 0, 100);
-    av_base64_encode(str_pps, 100, (uint8_t *) pps, pps_len);
+    av_base64_encode(str_pps, 100, (uint8_t *) pps, pps_len); // 生成SDP的PPS、SPS的写法
 
     char demo[] =
             "m=video %d RTP/AVP %d\n"
