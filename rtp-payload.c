@@ -16,7 +16,7 @@ struct rtp_payload_delegate_t     // 代理结构体
 };
 
 /// @return 0-ok, <0-error
-static int rtp_payload_find(int payload, const char* encoding, struct rtp_payload_delegate_t* codec);
+static int rtp_payload_find(int payload, const char* format, struct rtp_payload_delegate_t* codec);
 
 /**
  * @brief rtp_payload_encode_create
@@ -37,7 +37,7 @@ void* rtp_payload_encode_create(int payload, const char* name, uint16_t seq, uin
     if (ctx)
     {
         size = rtp_packet_getsize();
-        if (rtp_payload_find(payload, name, ctx) < 0   // 查找有没有注册该编码器(封装器)
+        if (rtp_payload_find(payload, name, ctx) < 0   // 查找有没有注册该封装器
             || NULL == (ctx->packer = ctx->encoder->create(size, (uint8_t)payload, seq, ssrc, handler, cbparam)))
         {
             free(ctx);
@@ -76,6 +76,7 @@ int rtp_payload_encode_input(void* encoder, const void* data, int bytes, uint32_
     ctx = (struct rtp_payload_delegate_t*)encoder;
     return ctx->encoder->input(ctx->packer, data, bytes, timestamp);
 }
+
 
 void* rtp_payload_decode_create(int payload, const char* name, struct rtp_payload_t *handler, void* cbparam)
 {
@@ -124,12 +125,11 @@ int rtp_packet_getsize()
     return s_max_packet_size;
 }
 
-static int rtp_payload_find(int payload, const char* encoding, struct rtp_payload_delegate_t* codec)
+static int rtp_payload_find(int payload, const char* format, struct rtp_payload_delegate_t* codec)
 {
-    assert(payload >= 0 && payload <= 127);
-    if (payload >= 96 && encoding)
+    if (payload >= 96 && format)
     {
-        if (0 == strcasecmp(encoding, "H264"))
+        if (0 == strcasecmp(format, "H264"))
         {
             // H.264 video (MPEG-4 Part 10) (RFC 6184)
             codec->encoder = rtp_h264_encode();
@@ -144,7 +144,6 @@ static int rtp_payload_find(int payload, const char* encoding, struct rtp_payloa
     {
         return -1;
     }
-
 
     return 0;
 }

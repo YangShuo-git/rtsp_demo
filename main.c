@@ -18,8 +18,8 @@
 // 需要传输到回调函数中
 struct rtp_h264_test_t
 {
-    int payload;                // payload type
-    const char* encoding;       // 音频、视频的格式，比如H264, 该工程只支持264
+    int payload;               // payload type
+    const char* format;       // 音频、视频的格式，比如H264, 该工程只支持264
     int fd;
     struct sockaddr_in addr;
     size_t addr_size;
@@ -27,11 +27,11 @@ struct rtp_h264_test_t
     char *in_file_name;             // H264文件名
     FILE* in_file;                  // H264裸流文件
     float frame_rate;               // 帧率  是手动设置的
-    void* encoder_h264;             // 封装回调函数
+    void* encoder_h264;             // 封装
 
     char *out_file_name;
     FILE *out_file;
-    void* decoder_h264;             // 解封装回调函数
+    void* decoder_h264;             // 解封装
 
     uint8_t sps[40];
     int sps_len;
@@ -83,12 +83,12 @@ static int rtp_decode_packet(void* param, const void *packet, int bytes, uint32_
     assert(0 == flags);
 
     size_t size = 0;
-    if (0 == strcmp("H264", ctx->encoding) || 0 == strcmp("H265", ctx->encoding))
+    if (0 == strcmp("H264", ctx->format) || 0 == strcmp("H265", ctx->format))
     {
         memcpy(buffer, start_code, sizeof(start_code));
         size += sizeof(start_code);
     }
-    else if (0 == strcasecmp("mpeg4-generic", ctx->encoding))
+    else if (0 == strcasecmp("mpeg4-generic", ctx->format))
     {
         int len = bytes + 7;
         uint8_t profile = 2;
@@ -144,17 +144,17 @@ int main()
     handler_rtp_encode_h264.free = rtp_free;
     handler_rtp_encode_h264.packet = rtp_encode_packet;
 
-    const char* encoding = "H264";
-    ctx.payload = 96;
-    ctx.encoding = encoding;
-    ctx.encoder_h264 = rtp_payload_encode_create(ctx.payload, ctx.encoding, 1, 0x12345678, &handler_rtp_encode_h264, &ctx);
+    const char* format = "H264";
+    ctx.payload = 96;  // 采用PS解复用，将音视频分开解码；若负载类型为98，直接按照H264的解码类型解码
+    ctx.format = format;
+    ctx.encoder_h264 = rtp_payload_encode_create(ctx.payload, ctx.format, 1, 0x12345678, &handler_rtp_encode_h264, &ctx);
 
     // H264 RTP decode回调
     struct rtp_payload_t handler_rtp_decode_h264;
     handler_rtp_decode_h264.alloc = rtp_alloc;
     handler_rtp_decode_h264.free = rtp_free;
     handler_rtp_decode_h264.packet = rtp_decode_packet;
-    ctx.decoder_h264 = rtp_payload_decode_create(ctx.payload, ctx.encoding, &handler_rtp_decode_h264, &ctx);
+    ctx.decoder_h264 = rtp_payload_decode_create(ctx.payload, ctx.format, &handler_rtp_decode_h264, &ctx);
 
     nalu_t *n = NULL;
 
