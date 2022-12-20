@@ -19,19 +19,20 @@
 struct rtp_h264_test_t
 {
     int payload;               // payload type
-    const char* format;       // 音频、视频的格式，比如H264, 该工程只支持264
-    int fd;
-    struct sockaddr_in addr;
-    size_t addr_size;
+    const char* format;        // 音频、视频的格式，比如H264, 该工程只支持264
+
+    int fd;                    // socket的返回值
+    struct sockaddr_in addr;   // 结构体里面保存了IP地址和端口号
+    size_t addr_size;          // addr的大小
 
     char *in_file_name;             // H264文件名
     FILE* in_file;                  // H264裸流文件
     float frame_rate;               // 帧率  是手动设置的
-    void* encoder_h264;             // 封装
+    void* encoder_h264;             // 代理封装
 
     char *out_file_name;
     FILE *out_file;
-    void* decoder_h264;             // 解封装
+    void* decoder_h264;             // 代理解封装
 
     uint8_t sps[40];
     int sps_len;
@@ -112,7 +113,7 @@ static int rtp_decode_packet(void* param, const void *packet, int bytes, uint32_
 }
 
 // 发送H264 RTP over UDP
-#define DEST_IP              "192.168.2.110"      // 支持成对方的ip地址
+#define DEST_IP              "192.168.205.1"      // 支持成对方的ip地址
 #define DEST_PORT            9832   //端口号
 
 // ffplay 播放 ffplay h264.sdp -protocol_whitelist "file,http,https,rtp,udp,tcp,tls"
@@ -135,8 +136,8 @@ int main()
     struct rtp_h264_test_t ctx;     // 封装的测试 带H264 RTP封装和解封装
     memset(&ctx, 0, sizeof(struct rtp_h264_test_t));
 
-    ctx.in_file = bits;             // 输入文件
-    ctx.out_file = out_file;        // 输出文件
+    ctx.in_file = bits;         // 输入文件
+    ctx.out_file = out_file;    // 输出文件
 
     // H264 RTP encode回调
     struct rtp_payload_t handler_rtp_encode_h264;
@@ -159,9 +160,9 @@ int main()
     nalu_t *n = NULL;
 
     ctx.frame_rate = 25;
-    unsigned int timestamp_increse=0;
-    unsigned int ts_current=0;
-    timestamp_increse=(unsigned int)(90000.0 / ctx.frame_rate); //+0.5);  //时间戳，H264的视频设置成90000
+    unsigned int timestamp_increse = 0;
+    unsigned int ts_current = 0;
+    timestamp_increse = (unsigned int)(90000.0 / ctx.frame_rate); //+0.5);  //时间戳，H264设置成90000
 
 
     ctx.addr.sin_family = AF_INET;
@@ -174,9 +175,10 @@ int main()
 #endif
     ctx.addr_size =sizeof(ctx.addr);
     // connect(ctx.fd, (const sockaddr *)&ctx.addr, len) ;//申请UDP套接字
+
     n = alloc_nalu(2000000);//为结构体nalu_t及其成员buf分配空间。返回值为指向nalu_t存储空间的指针
 
-    while(!feof(bits))
+    while(!feof(bits))  // 如果文件结束，则返回非0值
     {
         int ret =get_annexb_nalu(n, bits);//每执行一次，文件的指针指向本次找到的NALU的末尾，下一个位置即为下个NALU的起始码0x000001
         printf("read h264bitstram -> nal_unit_type:%d, unit_len:%d\n", n->nal_unit_type, n->len);
@@ -184,12 +186,12 @@ int main()
         if(n->nal_unit_type == 7 && ctx.got_sps_pps == 0)
         {
             memcpy(ctx.sps, &n->buf[n->startcodeprefix_len], n->len - n->startcodeprefix_len);
-            ctx.sps_len =  n->len - n->startcodeprefix_len;
+            ctx.sps_len = n->len - n->startcodeprefix_len;
         }
         if(n->nal_unit_type == 8 && ctx.got_sps_pps == 0)
         {
             memcpy(ctx.pps, &n->buf[n->startcodeprefix_len], n->len - n->startcodeprefix_len);
-            ctx.pps_len =  n->len - n->startcodeprefix_len;
+            ctx.pps_len = n->len - n->startcodeprefix_len;
             if(!ctx.got_sps_pps)
             {
                 h264_sdp_create("h264.sdp", DEST_IP, DEST_PORT,
@@ -208,7 +210,6 @@ int main()
                 ts_current = ts_current + timestamp_increse;   // 注意时间戳的完整一帧数据后再叠加（不是slice，一帧可能可能有多个slice）
         }
 
-        // printf("ret:%d\n", ret);
         usleep(25000);
     }
 

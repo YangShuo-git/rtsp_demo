@@ -42,7 +42,7 @@ void free_nalu(nalu_t *n)
 FILE *open_bitstream_file (char *filename)
 {
     FILE *bits = NULL;
-    if (NULL == (bits=fopen(filename, "rb")))
+    if (NULL == (bits = fopen(filename, "rb")))
     {
         printf("open file error\n");
     }

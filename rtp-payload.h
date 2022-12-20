@@ -20,11 +20,11 @@ struct rtp_payload_t        // 该结构体用来封装回调函数
     void* (*alloc)(void* param, int bytes);
     void (*free)(void* param, void *packet);
 
-    /// @return 0-ok, other-error       拿到一帧完整的数据  回调函数 packetCallback
+    /// @return 0-ok, other-error       拿到一帧完整的数据  回调函数 （packetCallback）
     int (*packet)(void* param, const void *packet, int bytes, uint32_t timestamp, int flags);
 };
 
-/// Create RTP packet encoder，创建不同的封装器 (H264 nalu -> RTP; AAC -> RTP)
+/// Create RTP packet encoder，创建不同的封装器，是最外层的调用接口 (H264 nalu -> RTP; AAC -> RTP)
 /// @param[in] payload RTP payload type, value: [0, 127] (see more about rtp-profile.h)
 /// @param[in] name RTP payload name
 /// @param[in] seq RTP header sequence number filed
