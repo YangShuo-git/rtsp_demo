@@ -31,35 +31,35 @@ static int rtp_payload_find(int payload, const char* format, struct rtp_payload_
 void* rtp_payload_encode_create(int payload, const char* name, uint16_t seq, uint32_t ssrc, struct rtp_payload_t *handler, void* cbparam)
 {
     int size;
-    struct rtp_payload_delegate_t* ctx;
+    struct rtp_payload_delegate_t* delegateCtx;
 
-    ctx = calloc(1, sizeof(*ctx));
-    if (ctx)
+    delegateCtx = calloc(1, sizeof(*delegateCtx));
+    if (delegateCtx)
     {
         size = rtp_packet_getsize();
-        if (rtp_payload_find(payload, name, ctx) < 0   // 查找有没有注册该封装器
-            || NULL == (ctx->packer = ctx->encoder->create(size, (uint8_t)payload, seq, ssrc, handler, cbparam)))
+        if (rtp_payload_find(payload, name, delegateCtx) < 0   // 查找有没有注册该封装器
+            || NULL == (delegateCtx->packer = delegateCtx->encoder->create(size, (uint8_t)payload, seq, ssrc, handler, cbparam)))
         {
-            free(ctx);
+            free(delegateCtx);
             return NULL;
         }
     }
-    return ctx;
+    return delegateCtx;
 }
 
 void rtp_payload_encode_destroy(void* encoder)
 {
-    struct rtp_payload_delegate_t* ctx;
-    ctx = (struct rtp_payload_delegate_t*)encoder;
-    ctx->encoder->destroy(ctx->packer);
-    free(ctx);
+    struct rtp_payload_delegate_t* delegateCtx;
+    delegateCtx = (struct rtp_payload_delegate_t*)encoder;
+    delegateCtx->encoder->destroy(delegateCtx->packer);
+    free(delegateCtx);
 }
 
 void rtp_payload_encode_getinfo(void* encoder, uint16_t* seq, uint32_t* timestamp)
 {
-    struct rtp_payload_delegate_t* ctx;
-    ctx = (struct rtp_payload_delegate_t*)encoder;
-    ctx->encoder->get_info(ctx->packer, seq, timestamp);
+    struct rtp_payload_delegate_t* delegateCtx;
+    delegateCtx = (struct rtp_payload_delegate_t*)encoder;
+    delegateCtx->encoder->get_info(delegateCtx->packer, seq, timestamp);
 }
 
 /**
@@ -72,41 +72,41 @@ void rtp_payload_encode_getinfo(void* encoder, uint16_t* seq, uint32_t* timestam
  */
 int rtp_payload_encode_input(void* encoder, const void* data, int bytes, uint32_t timestamp)
 {
-    struct rtp_payload_delegate_t* ctx;
-    ctx = (struct rtp_payload_delegate_t*)encoder;
-    return ctx->encoder->input(ctx->packer, data, bytes, timestamp);
+    struct rtp_payload_delegate_t* delegateCtx;
+    delegateCtx = (struct rtp_payload_delegate_t*)encoder;
+    return delegateCtx->encoder->input(delegateCtx->packer, data, bytes, timestamp);
 }
 
 
 void* rtp_payload_decode_create(int payload, const char* name, struct rtp_payload_t *handler, void* cbparam)
 {
-    struct rtp_payload_delegate_t* ctx;
-    ctx = calloc(1, sizeof(*ctx));
-    if (ctx)
+    struct rtp_payload_delegate_t* delegateCtx;
+    delegateCtx = calloc(1, sizeof(*delegateCtx));
+    if (delegateCtx)
     {
-        if (rtp_payload_find(payload, name, ctx) < 0
-            || NULL == (ctx->packer = ctx->decoder->create(handler, cbparam)))
+        if (rtp_payload_find(payload, name, delegateCtx) < 0
+            || NULL == (delegateCtx->packer = delegateCtx->decoder->create(handler, cbparam)))
         {
-            free(ctx);
+            free(delegateCtx);
             return NULL;
         }
     }
-    return ctx;
+    return delegateCtx;
 }
 
 void rtp_payload_decode_destroy(void* decoder)
 {
-    struct rtp_payload_delegate_t* ctx;
-    ctx = (struct rtp_payload_delegate_t*)decoder;
-    ctx->decoder->destroy(ctx->packer);
-    free(ctx);
+    struct rtp_payload_delegate_t* delegateCtx;
+    delegateCtx = (struct rtp_payload_delegate_t*)decoder;
+    delegateCtx->decoder->destroy(delegateCtx->packer);
+    free(delegateCtx);
 }
 
 int rtp_payload_decode_input(void* decoder, const void* packet, int bytes)
 {
-    struct rtp_payload_delegate_t* ctx;
-    ctx = (struct rtp_payload_delegate_t*)decoder;
-    return ctx->decoder->input(ctx->packer, packet, bytes);
+    struct rtp_payload_delegate_t* delegateCtx;
+    delegateCtx = (struct rtp_payload_delegate_t*)decoder;
+    return delegateCtx->decoder->input(delegateCtx->packer, packet, bytes);
 }
 
 // Default max packet size (1500, minus allowance for IP, UDP, UMTP headers)

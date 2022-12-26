@@ -16,7 +16,7 @@
 #include "h264-util.h"
 
 // 需要传输到回调函数中
-struct rtp_h264_test_t
+struct rtp_h264_context
 {
     int payload;               // payload type
     const char* format;        // 音频、视频的格式，比如H264, 该工程只支持264
@@ -29,10 +29,10 @@ struct rtp_h264_test_t
     FILE* in_file;                  // H264裸流文件
     float frame_rate;               // 帧率  是手动设置的
     void* encoder_h264;             // 代理封装
+    void* decoder_h264;             // 代理解封装
 
     char *out_file_name;
     FILE *out_file;
-    void* decoder_h264;             // 代理解封装
 
     uint8_t sps[40];
     int sps_len;
@@ -55,7 +55,7 @@ static void rtp_free(void* param, void * packet)    // 因为rtp_alloc是静态�
 // 拿到一帧RTP序列化后的数据
 static int rtp_encode_packet(void* param, const void *packet, int bytes, uint32_t timestamp, int flags)
 {
-    struct rtp_h264_test_t* ctx = (struct rtp_h264_test_t*)param;
+    struct rtp_h264_context* ctx = (struct rtp_h264_context*)param;
     int ret = 0;
     //1. 通过socket发送出去
     ret = sendto(ctx->fd,
@@ -68,8 +68,8 @@ static int rtp_encode_packet(void* param, const void *packet, int bytes, uint32_
     printf("rtp send packet -> nalu_type:%d, 0x%02x, 0x%02x, bytes:%d, timestamp:%u\n",
            nalu[12]&0x1f,  nalu[12],  nalu[13], bytes, timestamp);
 
-    //2. 解封装，用于保存为裸流h264（存疑?)
-    ret = rtp_payload_decode_input(ctx->decoder_h264, packet, bytes);       // 解封装
+    //2. 解封装，用于保存为裸流h264
+    ret = rtp_payload_decode_input(ctx->decoder_h264, packet, bytes);
 
     return 0;
 }
@@ -77,7 +77,7 @@ static int rtp_encode_packet(void* param, const void *packet, int bytes, uint32_
 static int rtp_decode_packet(void* param, const void *packet, int bytes, uint32_t timestamp, int flags)
 {
     static const uint8_t start_code[4] = { 0, 0, 0, 1 };
-    struct rtp_h264_test_t* ctx = (struct rtp_h264_test_t*)param;
+    struct rtp_h264_context* ctx = (struct rtp_h264_context*)param;
 
     static uint8_t buffer[2 * 1024 * 1024];
     assert(bytes + 4 < sizeof(buffer));
@@ -133,8 +133,8 @@ int main()
         return -1;
     }
 
-    struct rtp_h264_test_t ctx;     // 封装的测试 带H264 RTP封装和解封装
-    memset(&ctx, 0, sizeof(struct rtp_h264_test_t));
+    struct rtp_h264_context ctx;     // 封装的测试 带H264 RTP封装和解封装
+    memset(&ctx, 0, sizeof(struct rtp_h264_context));
 
     ctx.in_file = bits;         // 输入文件
     ctx.out_file = out_file;    // 输出文件
@@ -176,11 +176,11 @@ int main()
     ctx.addr_size =sizeof(ctx.addr);
     // connect(ctx.fd, (const sockaddr *)&ctx.addr, len) ;//申请UDP套接字
 
-    n = alloc_nalu(2000000);//为结构体nalu_t及其成员buf分配空间。返回值为指向nalu_t存储空间的指针
+    n = alloc_nalu(2000000); //为结构体nalu_t及其成员buf分配空间。返回值为指向nalu_t存储空间的指针
 
-    while(!feof(bits))  // 如果文件结束，则返回非0值
+    while(!feof(bits))  // 文件不结束，返回0；如果文件结束，则返回非0值
     {
-        int ret =get_annexb_nalu(n, bits);//每执行一次，文件的指针指向本次找到的NALU的末尾，下一个位置即为下个NALU的起始码0x000001
+        int ret = get_annexb_nalu(n, bits); //每执行一次，文件的指针指向本次找到的NALU的末尾，下一个位置即为下个NALU的起始码0x000001
         printf("read h264bitstram -> nal_unit_type:%d, unit_len:%d\n", n->nal_unit_type, n->len);
 
         if(n->nal_unit_type == 7 && ctx.got_sps_pps == 0)

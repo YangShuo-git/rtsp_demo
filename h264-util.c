@@ -8,7 +8,7 @@ nalu_t *alloc_nalu(int buffersize)
 {
     nalu_t *n;
 
-    if ((n = (nalu_t*)calloc (1, sizeof (nalu_t))) == NULL)
+    if ((n = (nalu_t*)calloc(1, sizeof (nalu_t))) == NULL)
     {
         printf("alloc_nalu: n");
         exit(0);
@@ -16,7 +16,7 @@ nalu_t *alloc_nalu(int buffersize)
 
     n->max_size = buffersize;
 
-    if ((n->buf = (char*)calloc (buffersize, sizeof (char))) == NULL)
+    if ((n->buf = (char*)calloc(buffersize, sizeof (char))) == NULL)
     {
         free (n);
         printf ("alloc_nalu: n->buf");
@@ -25,7 +25,7 @@ nalu_t *alloc_nalu(int buffersize)
 
     return n;
 }
-//释放
+
 void free_nalu(nalu_t *n)
 {
     if (n)
@@ -33,7 +33,7 @@ void free_nalu(nalu_t *n)
         if (n->buf)
         {
             free(n->buf);
-            n->buf=NULL;
+            n->buf = NULL;
         }
         free (n);
     }
