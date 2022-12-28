@@ -28,6 +28,7 @@ struct rtp_h264_context
     char *in_file_name;             // H264文件名
     FILE* in_file;                  // H264裸流文件
     float frame_rate;               // 帧率  是手动设置的
+
     void* encoder_h264;             // 代理封装
     void* decoder_h264;             // 代理解封装
 
@@ -116,7 +117,7 @@ static int rtp_decode_packet(void* param, const void *packet, int bytes, uint32_
 #define DEST_IP              "192.168.205.1"      // 支持成对方的ip地址
 #define DEST_PORT            9832   //端口号
 
-// ffplay 播放 ffplay h264.sdp -protocol_whitelist "file,http,https,rtp,udp,tcp,tls"
+// ffplay播放 ffplay h264.sdp -protocol_whitelist "file,http,https,rtp,udp,tcp,tls"
 
 int main()
 {
@@ -133,6 +134,7 @@ int main()
         return -1;
     }
 
+    nalu_t *n = NULL;
     struct rtp_h264_context ctx;     // 封装的测试 带H264 RTP封装和解封装
     memset(&ctx, 0, sizeof(struct rtp_h264_context));
 
@@ -145,9 +147,8 @@ int main()
     handler_rtp_encode_h264.free = rtp_free;
     handler_rtp_encode_h264.packet = rtp_encode_packet;
 
-    const char* format = "H264";
     ctx.payload = 96;  // 采用PS解复用，将音视频分开解码；若负载类型为98，直接按照H264的解码类型解码
-    ctx.format = format;
+    ctx.format = "H264";
     ctx.encoder_h264 = rtp_payload_encode_create(ctx.payload, ctx.format, 1, 0x12345678, &handler_rtp_encode_h264, &ctx);
 
     // H264 RTP decode回调
@@ -157,7 +158,6 @@ int main()
     handler_rtp_decode_h264.packet = rtp_decode_packet;
     ctx.decoder_h264 = rtp_payload_decode_create(ctx.payload, ctx.format, &handler_rtp_decode_h264, &ctx);
 
-    nalu_t *n = NULL;
 
     ctx.frame_rate = 25;
     unsigned int timestamp_increse = 0;
@@ -176,22 +176,23 @@ int main()
     ctx.addr_size =sizeof(ctx.addr);
     // connect(ctx.fd, (const sockaddr *)&ctx.addr, len) ;//申请UDP套接字
 
-    n = alloc_nalu(2000000); //为结构体nalu_t及其成员buf分配空间。返回值为指向nalu_t存储空间的指针
 
-    while(!feof(bits))  // 文件不结束，返回0；如果文件结束，则返回非0值
+    n = alloc_nalu(2000000); //为nalu_t及其成员buf分配空间，2M分配给了buf。返回值为指向nalu_t存储空间的指针
+
+    while(!feof(bits))  //如果文件到头，则返回非0值；文件没有到头，返回0
     {
         int ret = get_annexb_nalu(n, bits); //每执行一次，文件的指针指向本次找到的NALU的末尾，下一个位置即为下个NALU的起始码0x000001
-        printf("read h264bitstram -> nal_unit_type:%d, unit_len:%d\n", n->nal_unit_type, n->len);
+        printf("read h264bitstram: nal_unit_type:%d, unit_len:%d\n", n->nal_unit_type, n->len);
 
         if(n->nal_unit_type == 7 && ctx.got_sps_pps == 0)
         {
-            memcpy(ctx.sps, &n->buf[n->startcodeprefix_len], n->len - n->startcodeprefix_len);
-            ctx.sps_len = n->len - n->startcodeprefix_len;
+            memcpy(ctx.sps, &n->buf[n->startCodeLen], n->len - n->startCodeLen);
+            ctx.sps_len = n->len - n->startCodeLen;
         }
         if(n->nal_unit_type == 8 && ctx.got_sps_pps == 0)
         {
-            memcpy(ctx.pps, &n->buf[n->startcodeprefix_len], n->len - n->startcodeprefix_len);
-            ctx.pps_len = n->len - n->startcodeprefix_len;
+            memcpy(ctx.pps, &n->buf[n->startCodeLen], n->len - n->startCodeLen);
+            ctx.pps_len = n->len - n->startCodeLen;
             if(!ctx.got_sps_pps)
             {
                 h264_sdp_create("h264.sdp", DEST_IP, DEST_PORT,

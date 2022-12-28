@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "cstdlib": "c",
-        "rtp-util.h": "c"
+        "rtp-util.h": "c",
+        "h264-util.h": "c"
     }
 }
