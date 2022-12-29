@@ -54,6 +54,6 @@ struct rtp_payload_encode_t *rtp_h264_encode(void);
 struct rtp_payload_decode_t *rtp_h264_decode(void);
 
 
-int rtp_packet_serialize_header(const struct rtp_packet_t *pkt, void* data, int bytes);
+int rtp_packet_serialize_header(const struct RtpPacket *pkt, void* data, int bytes);
 
 #endif /* !_rtp_payload_internal_h_ */

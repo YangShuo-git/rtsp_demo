@@ -19,7 +19,7 @@
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */
 // 通过收到的数据，解析出来可读的RTP packet 也就是反序列化
-int rtp_packet_deserialize(struct rtp_packet_t *pkt, const void* data, int bytes)
+int rtp_packet_deserialize(struct RtpPacket *pkt, const void* data, int bytes)
 {
     uint32_t v;
     int headerlen;
@@ -31,28 +31,28 @@ int rtp_packet_deserialize(struct rtp_packet_t *pkt, const void* data, int bytes
     }
 
     ptr = (const unsigned char *)data;
-    memset(pkt, 0, sizeof(struct rtp_packet_t));
+    memset(pkt, 0, sizeof(struct RtpPacket));
 
     // pkt header
     v = nbo_r32(ptr);
-    pkt->rtp.v = RTP_V(v);
-    pkt->rtp.p = RTP_P(v);
-    pkt->rtp.x = RTP_X(v);
-    pkt->rtp.cc = RTP_CC(v);
-    pkt->rtp.m = RTP_M(v);
-    pkt->rtp.pt = RTP_PT(v);
-    pkt->rtp.seq = RTP_SEQ(v);
-    pkt->rtp.timestamp = nbo_r32(ptr + 4);
-    pkt->rtp.ssrc = nbo_r32(ptr + 8);
+    pkt->header.v = RTP_V(v);
+    pkt->header.p = RTP_P(v);
+    pkt->header.x = RTP_X(v);
+    pkt->header.cc = RTP_CC(v);
+    pkt->header.m = RTP_M(v);
+    pkt->header.pt = RTP_PT(v);
+    pkt->header.seq = RTP_SEQ(v);
+    pkt->header.timestamp = nbo_r32(ptr + 4);
+    pkt->header.ssrc = nbo_r32(ptr + 8);
 
-    headerlen = RTP_FIXED_HEADER + pkt->rtp.cc * 4;    // header带csrc时，头部总长度
-    if (RTP_VERSION != pkt->rtp.v || bytes < headerlen + (pkt->rtp.x ? 4 : 0) + (pkt->rtp.p ? 1 : 0))
+    headerlen = RTP_FIXED_HEADER + pkt->header.cc * 4;    // header带csrc时，头部总长度
+    if (RTP_VERSION != pkt->header.v || bytes < headerlen + (pkt->header.x ? 4 : 0) + (pkt->header.p ? 1 : 0))
     {
         return -1;
     }
 
     // pkt csrc 
-    for (int i = 0; i < pkt->rtp.cc; i++)
+    for (int i = 0; i < pkt->header.cc; i++)
     {
         pkt->csrc[i] = nbo_r32(ptr + 12 + i * 4);
     }
@@ -62,7 +62,7 @@ int rtp_packet_deserialize(struct rtp_packet_t *pkt, const void* data, int bytes
     pkt->payloadlen = bytes - headerlen;           
 
     // pkt header extension
-    if (1 == pkt->rtp.x)
+    if (1 == pkt->header.x)
     {
         const uint8_t *rtpext = ptr + headerlen;
         pkt->extension = rtpext + 4;
@@ -80,7 +80,7 @@ int rtp_packet_deserialize(struct rtp_packet_t *pkt, const void* data, int bytes
     }
 
     // padding
-    if (1 == pkt->rtp.p)
+    if (1 == pkt->header.p)
     {
         uint8_t padding = ptr[bytes - 1];
         if (pkt->payloadlen < padding)
@@ -97,19 +97,19 @@ int rtp_packet_deserialize(struct rtp_packet_t *pkt, const void* data, int bytes
 }
 
 // 把可读RTP packet封装成要发送出去的数据  也就是序列化
-int rtp_packet_serialize_header(const struct rtp_packet_t *pkt, void* data, int bytes)
+int rtp_packet_serialize_header(const struct RtpPacket *pkt, void* data, int bytes)
 {
     int headerlen;
     uint8_t* ptr;
 
     // RTP version field must equal 2 (p66)
-    if (RTP_VERSION != pkt->rtp.v || 0 != (pkt->extlen % 4))
+    if (RTP_VERSION != pkt->header.v || 0 != (pkt->extlen % 4))
     {
         return -1;
     }
 
     // RFC3550 5.1 RTP Fixed Header Fields(p12)
-    headerlen = RTP_FIXED_HEADER + pkt->rtp.cc * 4 + (pkt->rtp.x ? 4 : 0);
+    headerlen = RTP_FIXED_HEADER + pkt->header.cc * 4 + (pkt->header.x ? 4 : 0);
     if (bytes < headerlen + pkt->extlen)
     {
         return -1;
@@ -118,17 +118,17 @@ int rtp_packet_serialize_header(const struct rtp_packet_t *pkt, void* data, int 
     ptr = (uint8_t *)data;
 
     // write 12字节的 fixed header
-    nbo_write_rtp_header(ptr, &pkt->rtp);
+    nbo_write_rtp_header(ptr, &pkt->header);
     ptr += RTP_FIXED_HEADER;
 
     // write CSRC
-    for (int i = 0; i < pkt->rtp.cc; i++, ptr += 4)
+    for (int i = 0; i < pkt->header.cc; i++, ptr += 4)
     {
         nbo_w32(ptr, pkt->csrc[i]);     // csrc列表封装到头部
     }
 
     // write header extension
-    if (1 == pkt->rtp.x)
+    if (1 == pkt->header.x)
     {
         // 5.3.1 RTP Header Extension
         nbo_w16(ptr, pkt->reserved);
@@ -140,7 +140,7 @@ int rtp_packet_serialize_header(const struct rtp_packet_t *pkt, void* data, int 
     return headerlen + pkt->extlen;
 }
 
-int rtp_packet_serialize(const struct rtp_packet_t *pkt, void* data, int bytes)
+int rtp_packet_serialize(const struct RtpPacket *pkt, void* data, int bytes)
 {
     int headerlen;
 

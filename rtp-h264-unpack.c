@@ -282,7 +282,7 @@ static int rtp_h264_unpack_input(void* p, const void* packet, int bytes)
 {
     int r;
     uint8_t nalt;
-    struct rtp_packet_t pkt;
+    struct RtpPacket pkt;
     struct rtp_decode_h264_t *unpacker;
 
     unpacker = (struct rtp_decode_h264_t *)p;
@@ -293,15 +293,15 @@ static int rtp_h264_unpack_input(void* p, const void* packet, int bytes)
     if (-1 == unpacker->flags)
     {
         unpacker->flags = 0;
-        unpacker->seq = (uint16_t)(pkt.rtp.seq - 1); // disable packet lost
+        unpacker->seq = (uint16_t)(pkt.header.seq - 1); // disable packet lost
     }
 
-    if ((uint16_t)pkt.rtp.seq != (uint16_t)(unpacker->seq + 1))
+    if ((uint16_t)pkt.header.seq != (uint16_t)(unpacker->seq + 1))
     {
         unpacker->flags = RTP_PAYLOAD_FLAG_PACKET_LOST;
         unpacker->size = 0; // discard previous packets
     }
-    unpacker->seq = (uint16_t)pkt.rtp.seq;
+    unpacker->seq = (uint16_t)pkt.header.seq;
 
     nalt = ((unsigned char *)pkt.payload)[0];
     switch(nalt & 0x1F)
@@ -313,20 +313,20 @@ static int rtp_h264_unpack_input(void* p, const void* packet, int bytes)
         return 0; // packet discard
 
     case 24: // STAP-A
-        return rtp_h264_unpack_stap(unpacker, (const uint8_t*)pkt.payload, pkt.payloadlen, pkt.rtp.timestamp, 0);
+        return rtp_h264_unpack_stap(unpacker, (const uint8_t*)pkt.payload, pkt.payloadlen, pkt.header.timestamp, 0);
     case 25: // STAP-B
-        return rtp_h264_unpack_stap(unpacker, (const uint8_t*)pkt.payload, pkt.payloadlen, pkt.rtp.timestamp, 1);
+        return rtp_h264_unpack_stap(unpacker, (const uint8_t*)pkt.payload, pkt.payloadlen, pkt.header.timestamp, 1);
     case 26: // MTAP16
-        return rtp_h264_unpack_mtap(unpacker, (const uint8_t*)pkt.payload, pkt.payloadlen, pkt.rtp.timestamp, 2);
+        return rtp_h264_unpack_mtap(unpacker, (const uint8_t*)pkt.payload, pkt.payloadlen, pkt.header.timestamp, 2);
     case 27: // MTAP24
-        return rtp_h264_unpack_mtap(unpacker, (const uint8_t*)pkt.payload, pkt.payloadlen, pkt.rtp.timestamp, 3);
+        return rtp_h264_unpack_mtap(unpacker, (const uint8_t*)pkt.payload, pkt.payloadlen, pkt.header.timestamp, 3);
     case 28: // FU-A
-        return rtp_h264_unpack_fu(unpacker, (const uint8_t*)pkt.payload, pkt.payloadlen, pkt.rtp.timestamp, 0);
+        return rtp_h264_unpack_fu(unpacker, (const uint8_t*)pkt.payload, pkt.payloadlen, pkt.header.timestamp, 0);
     case 29: // FU-B
-        return rtp_h264_unpack_fu(unpacker, (const uint8_t*)pkt.payload, pkt.payloadlen, pkt.rtp.timestamp, 1);
+        return rtp_h264_unpack_fu(unpacker, (const uint8_t*)pkt.payload, pkt.payloadlen, pkt.header.timestamp, 1);
 
     default: // 1-23 NAL unit
-        r = unpacker->handler.packet(unpacker->cbparam, (const uint8_t*)pkt.payload, pkt.payloadlen, pkt.rtp.timestamp, unpacker->flags);
+        r = unpacker->handler.packet(unpacker->cbparam, (const uint8_t*)pkt.payload, pkt.payloadlen, pkt.header.timestamp, unpacker->flags);
         unpacker->flags = 0;
         unpacker->size = 0;
         return 0 == r ? 1 : r; // packet handled

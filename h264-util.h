@@ -7,10 +7,12 @@
 typedef struct _nalu_t
 {
     int startCodeLen;             // 4 for parameter sets and first slice in picture, 3 for everything else (suggested)
-    unsigned len;                 // Length of the NAL unit (include the start code, which does not belong to the NALU)
-    unsigned max_size;            // Nal Unit Buffer size
-    char *buf;                    // include start code
     unsigned short lost_packets;  // true, if packet loss is detected
+    unsigned max_size;            // Nal Unit Buffer size
+    
+    unsigned len;                 // Length of the NAL unit (include the start code, which does not belong to the NALU)
+    char *buf;                    // include start code
+
 
     int forbidden_bit;            // should be always FALSE
     int nal_reference_idc;        // NALU_PRIORITY_xxxx

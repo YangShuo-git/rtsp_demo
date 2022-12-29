@@ -1,4 +1,0 @@
-m=video 9832 RTP/AVP 96
-a=rtpmap:96 H264/90000
-a=fmtp:96 profile-level-id=640015; packetization-mode=1; sprop-parameter-sets=Z2QAFazZQUH6EAAAAwAQAAADAkDxYtlg,aOrssiw=
-c=IN IP4 192.168.205.1

@@ -34,7 +34,7 @@ static inline void rtp_write_uint32(uint8_t* ptr, uint32_t val)
     ptr[3] = (uint8_t)val;
 }
 
-static inline void nbo_write_rtp_header(uint8_t *ptr, const rtp_header_t *header)
+static inline void nbo_write_rtp_header(uint8_t *ptr, const RtpHeader *header)
 {
     ptr[0] = (uint8_t)((header->v << 6) | (header->p << 5) | (header->x << 4) | header->cc); //这是需要把8位整合到一起，再赋值
     ptr[1] = (uint8_t)((header->m << 7) | header->pt);
