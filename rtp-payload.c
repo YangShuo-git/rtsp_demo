@@ -12,7 +12,7 @@ struct rtp_payload_delegate_t     // 代理结构体 一层接口
 {
     struct rtp_payload_encode_t* encoder;  // 二层接口，有四个函数，可以重入
     struct rtp_payload_decode_t* decoder;
-    void* packer; // 接收不同类型的封包器
+    void* packer; // 根据实际情况，来决定是封包器，还是解包器
 };
 
 /// @return 0-ok, <0-error

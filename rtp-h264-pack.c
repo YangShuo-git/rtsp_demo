@@ -32,7 +32,7 @@
 
 #define N_FU_HEADER	2
 
-struct rtp_encode_h264_t
+struct RtpH264Packer
 {
     int size;
     struct RtpPacket pkt;
@@ -43,8 +43,8 @@ struct rtp_encode_h264_t
 
 static void* rtp_h264_pack_create(int size, uint8_t pt, uint16_t seq, uint32_t ssrc, struct rtp_payload_t *handler, void* cbparam)
 {
-    struct rtp_encode_h264_t *packer;
-    packer = (struct rtp_encode_h264_t *)calloc(1, sizeof(*packer));
+    struct RtpH264Packer *packer;
+    packer = (struct RtpH264Packer *)calloc(1, sizeof(*packer));
     if(!packer) return NULL;
 
     packer->size = size;
@@ -62,8 +62,8 @@ static void* rtp_h264_pack_create(int size, uint8_t pt, uint16_t seq, uint32_t s
 
 static void rtp_h264_pack_destroy(void* pack)
 {
-    struct rtp_encode_h264_t *packer;
-    packer = (struct rtp_encode_h264_t *)pack;
+    struct RtpH264Packer *packer;
+    packer = (struct RtpH264Packer *)pack;
 #if defined(_DEBUG) || defined(DEBUG)
     memset(packer, 0xCC, sizeof(*packer));
 #endif
@@ -72,8 +72,8 @@ static void rtp_h264_pack_destroy(void* pack)
 
 static void rtp_h264_pack_get_info(void* pack, uint16_t* seq, uint32_t* timestamp)
 {
-    struct rtp_encode_h264_t *packer;
-    packer = (struct rtp_encode_h264_t *)pack;
+    struct RtpH264Packer *packer;
+    packer = (struct RtpH264Packer *)pack;
     *seq = (uint16_t)packer->pkt.header.seq;
     *timestamp = packer->pkt.header.timestamp;
 }
@@ -88,7 +88,7 @@ static const uint8_t* h264_nalu_find(const uint8_t* p, const uint8_t* end)
     return end;
 }
 
-static int rtp_h264_pack_nalu(struct rtp_encode_h264_t *packer, const uint8_t* nalu, int bytes)
+static int rtp_h264_pack_nalu(struct RtpH264Packer *packer, const uint8_t* nalu, int bytes)
 {
     int r, n;
     uint8_t *rtp;
@@ -114,7 +114,7 @@ static int rtp_h264_pack_nalu(struct rtp_encode_h264_t *packer, const uint8_t* n
     return r;
 }
 
-static int rtp_h264_pack_fu_a(struct rtp_encode_h264_t *packer, const uint8_t* nalu, int bytes)
+static int rtp_h264_pack_fu_a(struct RtpH264Packer *packer, const uint8_t* nalu, int bytes)
 {
     int r, n;
     unsigned char *rtp;
@@ -177,8 +177,8 @@ static int rtp_h264_pack_input(void* pack, const void* h264, int bytes, uint32_t
 {
     int r = 0;
     const uint8_t *p1, *p2, *pend;
-    struct rtp_encode_h264_t *packer;
-    packer = (struct rtp_encode_h264_t *)pack;
+    struct RtpH264Packer *packer;
+    packer = (struct RtpH264Packer *)pack;
     //assert(packer->pkt.rtp.timestamp != timestamp || !packer->pkt.payload /*first packet*/);
     packer->pkt.header.timestamp = timestamp; //(uint32_t)time * KHz; // ms -> 90KHZ
 
