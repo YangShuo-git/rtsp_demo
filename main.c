@@ -208,7 +208,7 @@ int main()
         if(n->nal_unit_type != 7 &&
             n->nal_unit_type != 8 && n->nal_unit_type != 6) 
         {
-            ts_current = ts_current + timestamp_increse;   // 注意时间戳的完整一帧数据后再叠加（不是slice，一帧可能可能有多个slice）
+            ts_current = ts_current + timestamp_increse;   // 注意时间戳的完整一帧数据后再叠加（不是slice，一帧可能有多个slice）
         }
 
         usleep(25000);

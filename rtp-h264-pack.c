@@ -36,6 +36,7 @@ struct rtp_encode_h264_t
 {
     int size;
     struct RtpPacket pkt;
+
     struct rtp_payload_t handler;
     void* cbparam;
 };
@@ -51,7 +52,8 @@ static void* rtp_h264_pack_create(int size, uint8_t pt, uint16_t seq, uint32_t s
     packer->pkt.header.pt = pt;
     packer->pkt.header.seq = seq;
     packer->pkt.header.ssrc = ssrc;
-    
+
+    // 至此，两个在main.c的结构体，透传到最底层了
     memcpy(&packer->handler, handler, sizeof(packer->handler));
     packer->cbparam = cbparam;
 
@@ -170,7 +172,7 @@ static int rtp_h264_pack_fu_a(struct rtp_encode_h264_t *packer, const uint8_t* n
     return r;
 }
 
-// 这里的h264数据带了startcode
+// 这里读进来的h264数据带了startcode
 static int rtp_h264_pack_input(void* pack, const void* h264, int bytes, uint32_t timestamp)
 {
     int r = 0;

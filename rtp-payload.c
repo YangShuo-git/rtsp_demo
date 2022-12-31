@@ -8,11 +8,11 @@
 
 #define TS_PACKET_SIZE 188
 
-struct rtp_payload_delegate_t     // 代理结构体
+struct rtp_payload_delegate_t     // 代理结构体 一层接口
 {
-    struct rtp_payload_encode_t* encoder;
+    struct rtp_payload_encode_t* encoder;  // 二层接口，有四个函数，可以重入
     struct rtp_payload_decode_t* decoder;
-    void* packer;
+    void* packer; // 接收不同类型的封包器
 };
 
 /// @return 0-ok, <0-error
@@ -37,7 +37,7 @@ void* rtp_payload_encode_create(int payloadType, const char* name, uint16_t seq,
     if (delegateCtx)
     {
         size = rtp_packet_getsize();
-        if (rtp_payload_find(payloadType, name, delegateCtx) < 0   // 其实就是注册两个结构体encoder、decoder
+        if (rtp_payload_find(payloadType, name, delegateCtx) < 0   // 其实就是注册代理结构体里的结构体encoder、decoder（二层接口，可重入）
             || NULL == (delegateCtx->packer = delegateCtx->encoder->create(size, (uint8_t)payloadType, seq, ssrc, handler, cbparam)))
         {
             free(delegateCtx);

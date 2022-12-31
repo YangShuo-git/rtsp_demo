@@ -15,7 +15,7 @@ extern "C" {
 
 
 // 不管封包还是解包，调用者都是通过该结构体的回调函数来获取对应数据（重要的结构体）
-struct rtp_payload_t        // 该结构体用来封装回调函数
+struct rtp_payload_t
 {
     void* (*alloc)(void* param, int bytes);
     void (*free)(void* param, void *packet);
