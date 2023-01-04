@@ -66,7 +66,7 @@ static int rtp_encode_packet(void* param, const void* packet, int bytes, uint32_
                 (struct sockaddr*)&ctx->addr,
                 ctx->addr_size);
     uint8_t *nalu = (uint8_t *)packet;
-    printf("rtp send packet -> nalu_type:%d, 0x%02x, 0x%02x, bytes:%d, timestamp:%u\n",
+    printf("Send rtp packet: nalu_type:%d, 0x%02x, 0x%02x, bytes:%d, timestamp:%u\n",
            nalu[12]&0x1f,  nalu[12],  nalu[13], bytes, timestamp);
 
     //2. 解封装，用于保存为裸流h264
@@ -107,7 +107,7 @@ static int rtp_decode_packet(void* param, const void* packet, int bytes, uint32_
     }
     memcpy(buffer + size, packet, bytes);
     size += bytes;
-    printf("nalu get -> bytes:%d, timestamp:%u\n", size, timestamp);
+    printf("Get nalu: bytes:%d, timestamp:%u\n", size, timestamp);
     // TODO:
     // check media file
     fwrite(buffer, 1, size, ctx->out_file);
@@ -134,7 +134,7 @@ int main()
         return -1;
     }
 
-    nalu_t *n = NULL;
+    nalu_t *oneNalu = NULL;
     struct RtpContext rtpCtx;     // 封装的测试 带H264 RTP封装和解封装
     memset(&rtpCtx, 0, sizeof(struct RtpContext));
 
@@ -162,7 +162,7 @@ int main()
     rtpCtx.frame_rate = 25;
     unsigned int timestamp_increse = 0;
     unsigned int ts_current = 0;
-    timestamp_increse = (unsigned int)(90000.0 / rtpCtx.frame_rate); //+0.5);  //时间戳，H264设置成90000
+    timestamp_increse = (unsigned int)(90000.0 / rtpCtx.frame_rate);  //时间戳的增量（每帧的采样点数） 采样率/帧率
 
 
     rtpCtx.addr.sin_family = AF_INET;
@@ -177,22 +177,23 @@ int main()
     // connect(rtpCtx.fd, (const sockaddr *)&rtpCtx.addr, len) ;//申请UDP套接字
 
 
-    n = alloc_nalu(2000000); //为nalu_t及其成员buf分配空间，2M分配给了buf。返回值为指向nalu_t存储空间的指针
+    oneNalu = alloc_nalu(2000000); //为nalu_t及其成员buf分配空间，2M分配给了buf。返回值为指向nalu_t存储空间的指针
+    // 这里为什么会分配2M内存呢？
 
     while(!feof(bits))  //如果文件到头，则返回非0值；文件没有到头，返回0
     {
-        int ret = get_annexb_nalu(n, bits); //每执行一次，文件的指针指向本次找到的NALU的末尾，下一个位置即为下个NALU的起始码0x000001
-        printf("read h264bitstram: nal_unit_type:%d, unit_len:%d\n", n->nal_unit_type, n->len);
+        int ret = get_annexb_nalu(oneNalu, bits); //每执行一次，文件的指针指向本次找到的NALU的末尾，下一个位置即为下个NALU的起始码
+        printf("Read h264bitstram: nal_unit_type:%d, unit_len:%d\n", oneNalu->nal_unit_type, oneNalu->len);
 
-        if(n->nal_unit_type == 7 && rtpCtx.got_sps_pps == 0)
+        if(oneNalu->nal_unit_type == 7 && rtpCtx.got_sps_pps == 0)
         {
-            memcpy(rtpCtx.sps, &n->buf[n->startCodeLen], n->len - n->startCodeLen);
-            rtpCtx.sps_len = n->len - n->startCodeLen;
+            memcpy(rtpCtx.sps, &oneNalu->buf[oneNalu->startCodeLen], oneNalu->len - oneNalu->startCodeLen);
+            rtpCtx.sps_len = oneNalu->len - oneNalu->startCodeLen;
         }
-        if(n->nal_unit_type == 8 && rtpCtx.got_sps_pps == 0)
+        if(oneNalu->nal_unit_type == 8 && rtpCtx.got_sps_pps == 0)
         {
-            memcpy(rtpCtx.pps, &n->buf[n->startCodeLen], n->len - n->startCodeLen);
-            rtpCtx.pps_len = n->len - n->startCodeLen;
+            memcpy(rtpCtx.pps, &oneNalu->buf[oneNalu->startCodeLen], oneNalu->len - oneNalu->startCodeLen);
+            rtpCtx.pps_len = oneNalu->len - oneNalu->startCodeLen;
             if(!rtpCtx.got_sps_pps)
             {
                 h264_sdp_create("h264.sdp", DEST_IP, DEST_PORT,
@@ -204,9 +205,9 @@ int main()
 
         }
 
-        ret = rtp_payload_encode_input(rtpCtx.encoder_h264, n->buf, n->len, ts_current);
-        if(n->nal_unit_type != 7 &&
-            n->nal_unit_type != 8 && n->nal_unit_type != 6) 
+        // 这里是输入一个nalu，去进行RTP封包
+        ret = rtp_payload_encode_input(rtpCtx.encoder_h264, oneNalu->buf, oneNalu->len, ts_current);
+        if(oneNalu->nal_unit_type != 7 && oneNalu->nal_unit_type != 8 && oneNalu->nal_unit_type != 6) 
         {
             ts_current = ts_current + timestamp_increse;   // 注意时间戳的完整一帧数据后再叠加（不是slice，一帧可能有多个slice）
         }

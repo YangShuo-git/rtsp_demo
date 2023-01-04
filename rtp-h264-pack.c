@@ -172,14 +172,13 @@ static int rtp_h264_pack_fu_a(struct RtpH264Packer *packer, const uint8_t* nalu,
     return r;
 }
 
-// 这里读进来的h264数据带了startcode
+// 这里读进来的h264数据是有startcode
 static int rtp_h264_pack_input(void* pack, const void* h264, int bytes, uint32_t timestamp)
 {
     int r = 0;
     const uint8_t *p1, *p2, *pend;
     struct RtpH264Packer *packer;
     packer = (struct RtpH264Packer *)pack;
-    //assert(packer->pkt.rtp.timestamp != timestamp || !packer->pkt.payload /*first packet*/);
     packer->pkt.header.timestamp = timestamp; //(uint32_t)time * KHz; // ms -> 90KHZ
 
     pend = (const uint8_t*)h264 + bytes;
@@ -188,7 +187,6 @@ static int rtp_h264_pack_input(void* pack, const void* h264, int bytes, uint32_t
         size_t nalu_size;
 
         // filter H.264 start code(0x00000001)
-        assert(0 < (*p1 & 0x1F) && (*p1 & 0x1F) < 24);
         p2 = h264_nalu_find(p1 + 1, pend);
         nalu_size = p2 - p1;
 

@@ -72,7 +72,7 @@ int get_annexb_nalu (nalu_t *nalu, FILE *bits)
     if(isStartCode3 != 1)
     {
         //如果不是3字节的起始码，再读一个字节
-        if(1 != fread(tmpBuf+3, 1, 1, bits)) //读一个字节
+        if(1 != fread(tmpBuf+3, 1, 1, bits)) //读一个字节 
         {
             free(tmpBuf);
             return 0;
@@ -97,7 +97,7 @@ int get_annexb_nalu (nalu_t *nalu, FILE *bits)
         nalu->startCodeLen = 3;
     }
 
-    //查找下一个起始码（是在下面的while循环中不停地找）
+    //继续查找下一个起始码（是在下面的while循环中不停地找）
     isStartCode3 = 0;
     isStartCode4 = 0;
     
@@ -114,7 +114,7 @@ int get_annexb_nalu (nalu_t *nalu, FILE *bits)
             return pos-1;
         }
 
-        tmpBuf[pos++] = fgetc(bits); //读一个字节到buf中
+        tmpBuf[pos++] = fgetc(bits); //读一个字节到tmpBuf中
         isStartCode4 = find_start_code_4(&tmpBuf[pos-4]); //判断是否为0x00000001
         if(isStartCode4 != 1)
         {
@@ -128,7 +128,7 @@ int get_annexb_nalu (nalu_t *nalu, FILE *bits)
     // Hence, go back in the file
     rewind = (isStartCode4 == 1)? -4 : -3;
 
-    if (0 != fseek (bits, rewind, SEEK_CUR))//把文件指针指向前一个NALU的末尾，在当前文件指针位置上偏移 rewind。
+    if (0 != fseek (bits, rewind, SEEK_CUR))//把文件指针指向前一个NALU的末尾，文件指针需要偏移rewind。
     {
         free(tmpBuf);
         printf("get_annexb_nalu: Cannot fseek in the bit stream file");
@@ -137,7 +137,7 @@ int get_annexb_nalu (nalu_t *nalu, FILE *bits)
     // Here the Start code, the complete NALU, and the next start code is in the buf.
     // The size of buf is pos, pos+rewind are the number of bytes excluding the next
     // start code, and (pos+rewind)-startCodeLen is the size of the NALU excluding the start code
-    nalu->len = (pos + rewind);    //NALU长度，不包括下一个起始码。
+    nalu->len = (pos + rewind);    //NALU长度，不包括下一个起始码。偏移rewind个位置
     memcpy (nalu->buf, tmpBuf, nalu->len); //拷贝一个完整NALU，不包含下一个起始码
 
     nalu->forbidden_bit = nalu->buf[nalu->startCodeLen] & 0x80;     // 1 bit
