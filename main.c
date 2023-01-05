@@ -15,7 +15,7 @@
 #include "rtp-payload.h"
 #include "h264-util.h"
 
-// 需要传输到回调函数中
+// 贯穿整个主线的ctx
 struct RtpContext
 {
     int payloadType;           // RFC2250 建议96 表示PS 封装，建议97 为MPEG-4，建议98 为H264

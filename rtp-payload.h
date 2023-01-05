@@ -24,6 +24,14 @@ struct rtp_payload_t
     int (*packet)(void* param, const void *packet, int bytes, uint32_t timestamp, int flags);
 };
 
+// 代理结构体 一层接口
+struct rtp_payload_delegate_t     
+{
+    struct rtp_payload_encode_t* encoder;  // 二层接口，有四个函数，可以重入 封包结构体
+    struct rtp_payload_decode_t* decoder;
+    void* packer; // 这是已经封好的包
+};
+
 /// Create RTP packet encoder，创建不同的封装器，是最外层的调用接口 (H264 nalu -> RTP; AAC -> RTP)
 /// @param[in] payload RTP payload type, value: [0, 127] (see more about rtp-profile.h)
 /// @param[in] name RTP payload name

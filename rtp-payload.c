@@ -8,12 +8,12 @@
 
 #define TS_PACKET_SIZE 188
 
-struct rtp_payload_delegate_t     // 代理结构体 一层接口
-{
-    struct rtp_payload_encode_t* encoder;  // 二层接口，有四个函数，可以重入
-    struct rtp_payload_decode_t* decoder;
-    void* packer; // 根据实际情况，来决定是封包器，还是解包器
-};
+// struct rtp_payload_delegate_t     // 代理结构体 一层接口
+// {
+//     struct rtp_payload_encode_t* encoder;  // 二层接口，有四个函数，可以重入
+//     struct rtp_payload_decode_t* decoder;
+//     void* packer; // 根据实际情况，来决定是封包器，还是解包器
+// };
 
 /// @return 0-ok, <0-error
 static int rtp_payload_find(int payloadType, const char* format, struct rtp_payload_delegate_t* delegateCtx);
@@ -78,6 +78,8 @@ int rtp_payload_encode_input(void* encoder, const void* data, int bytes, uint32_
 }
 
 
+
+
 void* rtp_payload_decode_create(int payloadType, const char* name, struct rtp_payload_t *handler, void* cbparam)
 {
     struct rtp_payload_delegate_t* delegateCtx;
@@ -126,7 +128,7 @@ int rtp_packet_getsize()
 }
 
 
-// 注册delegateCtx中的两个结构体rtp_payload_encode_t、rtp_payload_decode_t 是第二层
+// 注册delegateCtx中的两个结构体rtp_payload_encode_t、rtp_payload_decode_t
 static int rtp_payload_find(int payloadType, const char* format, struct rtp_payload_delegate_t* delegateCtx)
 {
     if (payloadType >= 96 && format)

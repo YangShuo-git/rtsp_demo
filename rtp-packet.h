@@ -3,7 +3,7 @@
 
 #include "rtp-header.h"
 
-#define RTP_FIXED_HEADER 12     // RTP的header，固定长度
+#define RTP_FIXED_HEADER_LEN 12     // RTP的header，固定长度
 
 // RTP包 包括 header + [csrc/extension] + payload
 struct RtpPacket     
@@ -15,8 +15,8 @@ struct RtpPacket
     uint16_t extlen;        // extension length in bytes
     uint16_t reserved;      // extension reserved
 
-    const void* payload; // rtp payload
-    int payloadlen;      // payload length in bytes
+    const void* payload;    // rtp payload
+    int payloadlen;         // payload length in bytes
 };
 
 ///@return 0-ok, other-error   解包

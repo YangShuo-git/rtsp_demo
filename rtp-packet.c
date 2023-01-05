@@ -25,7 +25,7 @@ int rtp_packet_deserialize(struct RtpPacket *pkt, const void* data, int bytes)
     int headerlen;
     const uint8_t *ptr;
 
-    if (bytes < RTP_FIXED_HEADER)
+    if (bytes < RTP_FIXED_HEADER_LEN)
     {
         return -1;
     }
@@ -45,7 +45,7 @@ int rtp_packet_deserialize(struct RtpPacket *pkt, const void* data, int bytes)
     pkt->header.timestamp = nbo_r32(ptr + 4);
     pkt->header.ssrc = nbo_r32(ptr + 8);
 
-    headerlen = RTP_FIXED_HEADER + pkt->header.cc * 4;    // header带csrc时，头部总长度
+    headerlen = RTP_FIXED_HEADER_LEN + pkt->header.cc * 4;    // header带csrc时，头部总长度
     if (RTP_VERSION != pkt->header.v || bytes < headerlen + (pkt->header.x ? 4 : 0) + (pkt->header.p ? 1 : 0))
     {
         return -1;
@@ -109,7 +109,7 @@ int rtp_packet_serialize_header(const struct RtpPacket *pkt, void* data, int byt
     }
 
     // RFC3550 5.1 RTP Fixed Header Fields(p12)
-    headerlen = RTP_FIXED_HEADER + pkt->header.cc * 4 + (pkt->header.x ? 4 : 0);
+    headerlen = RTP_FIXED_HEADER_LEN + pkt->header.cc * 4 + (pkt->header.x ? 4 : 0);
     if (bytes < headerlen + pkt->extlen)
     {
         return -1;
@@ -119,7 +119,7 @@ int rtp_packet_serialize_header(const struct RtpPacket *pkt, void* data, int byt
 
     // write 12字节的 fixed header
     nbo_write_rtp_header(ptr, &pkt->header);
-    ptr += RTP_FIXED_HEADER;
+    ptr += RTP_FIXED_HEADER_LEN;
 
     // write CSRC
     for (int i = 0; i < pkt->header.cc; i++, ptr += 4)
@@ -145,7 +145,7 @@ int rtp_packet_serialize(const struct RtpPacket *pkt, void* data, int bytes)
     int headerlen;
 
     headerlen = rtp_packet_serialize_header(pkt, data, bytes);
-    if (headerlen < RTP_FIXED_HEADER || headerlen + pkt->payloadlen > bytes)
+    if (headerlen < RTP_FIXED_HEADER_LEN || headerlen + pkt->payloadlen > bytes)
         return -1;
 
     memcpy(((uint8_t*)data) + headerlen, pkt->payload, pkt->payloadlen);
