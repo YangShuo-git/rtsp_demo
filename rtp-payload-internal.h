@@ -49,9 +49,14 @@ struct rtp_payload_decode_t
 };
 
 
+// 通过这四个函数来给上面的结构体赋值
 struct rtp_payload_encode_t *rtp_h264_encode(void);
 
 struct rtp_payload_decode_t *rtp_h264_decode(void);
+
+struct rtp_payload_encode_t *rtp_mpeg4_generic_encode(void);
+
+struct rtp_payload_decode_t *rtp_mpeg4_generic_decode(void);
 
 
 int rtp_packet_serialize_header(const struct RtpPacket *pkt, void* data, int bytes);

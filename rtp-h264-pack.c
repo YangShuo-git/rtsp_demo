@@ -32,6 +32,8 @@
 
 #define N_FU_HEADER	2
 
+// 二层  真正实现的接口
+
 struct RtpH264Packer
 {
     int size;
@@ -53,9 +55,9 @@ static void* rtp_h264_pack_create(int size, uint8_t pt, uint16_t seq, uint32_t s
     packer->pkt.header.seq = seq;
     packer->pkt.header.ssrc = ssrc;
 
-    // 至此，两个在main.c的结构体：rtp_payload_t、RtpContext，透传到最底层了，封包器packer也创建成功
     memcpy(&packer->handler, handler, sizeof(packer->handler));
     packer->cbparam = cbparam;
+    // 至此，RTP包packer创建成功，两个在main.c的结构体：rtp_payload_t、RtpContext，也透传到最底层了
 
     return packer;
 }
@@ -90,25 +92,25 @@ static const uint8_t* h264_nalu_find(const uint8_t* p, const uint8_t* end)
 
 static int rtp_h264_pack_nalu(struct RtpH264Packer *packer, const uint8_t* nalu, int bytes)
 {
-    int r, n;
+    int r, len;
     uint8_t *rtp;
 
     packer->pkt.payload = nalu;
     packer->pkt.payloadlen = bytes;
-    n = RTP_FIXED_HEADER_LEN + packer->pkt.payloadlen;
-    rtp = (uint8_t*)packer->handler.alloc(packer->cbparam, n);
+    len = RTP_FIXED_HEADER_LEN + packer->pkt.payloadlen;
+    rtp = (uint8_t*)packer->handler.alloc(packer->cbparam, len);
     if (!rtp) return ENOMEM;
 
     //packer->pkt.rtp.m = 1; // set marker flag
     packer->pkt.header.m = (*nalu & 0x1f) <= 5 ? 1 : 0; // VCL only
-    n = rtp_packet_serialize(&packer->pkt, rtp, n);  // 序列化
-    if (n != RTP_FIXED_HEADER_LEN + packer->pkt.payloadlen)
+    len = rtp_packet_serialize(&packer->pkt, rtp, len);  // 序列化
+    if (len != RTP_FIXED_HEADER_LEN + packer->pkt.payloadlen)
     {
         return -1;
     }
 
     ++packer->pkt.header.seq;
-    r = packer->handler.packet(packer->cbparam, rtp, n, packer->pkt.header.timestamp, 0); // 通过packet回调函数把封包好的rtp包发送到应用层
+    r = packer->handler.packet(packer->cbparam, rtp, len, packer->pkt.header.timestamp, 0); // 通过packet回调函数把封包好的rtp包发送到应用层
     packer->handler.free(packer->cbparam, rtp);
     return r;
 }

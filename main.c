@@ -1,6 +1,5 @@
 ﻿#include <stdio.h>
 #include <string.h>
-#include <assert.h>
 #include <sys/types.h>
 
 #include <unistd.h>
@@ -15,25 +14,27 @@
 #include "rtp-payload.h"
 #include "h264-util.h"
 
+// 确实是将H264封装为PS流，应该为muxer，其中packer就是RTP包
+
 // 贯穿整个主线的ctx
 struct RtpContext
 {
-    int payloadType;           // RFC2250 建议96 表示PS 封装，建议97 为MPEG-4，建议98 为H264
+    int payloadType;           // RFC2250 96表示PS封装，97为MPEG-4，98为H264
     const char* format;        // 音频、视频的格式，比如H264, 该工程暂时只支持264
 
     int fd;                    // socket的返回值
     struct sockaddr_in addr;   // 结构体里面保存了IP地址和端口号
-    size_t addr_size;          // addr的大小
+    size_t addrSize;          // addr的大小
 
-    char* in_file_name;             // H264文件名
-    FILE* in_file;                  // H264裸流文件
+    char* inFileName;             // H264文件名
+    FILE* inFile;                  // H264裸流文件
     float frame_rate;               // 帧率  是手动设置的
 
-    void* encoder_h264;             // 代理封装
-    void* decoder_h264;             // 代理解封装
+    void* encoder_h264;             // 代理封装结构体
+    void* decoder_h264;             // 代理解封装结构体
 
-    char *out_file_name;
-    FILE *out_file;
+    char *outFileName;
+    FILE *outFile;
 
     uint8_t sps[40];
     int sps_len;
@@ -45,7 +46,6 @@ struct RtpContext
 static void* rtp_alloc(void* param, int bytes)
 {
     static uint8_t buffer[2 * 1024 * 1024 + 4] = { 0, 0, 0, 1, };   // 支持2M大小，不包括start code
-    assert(bytes <= sizeof(buffer) - 4);
     return buffer + 4;
 }
 
@@ -58,13 +58,14 @@ static int rtp_encode_packet(void* param, const void* packet, int bytes, uint32_
 {
     struct RtpContext* ctx = (struct RtpContext*)param;
     int ret = 0;
+
     //1. 通过socket发送出去
     ret = sendto(ctx->fd,
                 (void*)packet,
                 bytes,
                 0,
                 (struct sockaddr*)&ctx->addr,
-                ctx->addr_size);
+                ctx->addrSize);
     uint8_t *nalu = (uint8_t *)packet;
     printf("Send rtp packet: nalu_type:%d, 0x%02x, 0x%02x, bytes:%d, timestamp:%u\n",
            nalu[12]&0x1f,  nalu[12],  nalu[13], bytes, timestamp);
@@ -77,12 +78,10 @@ static int rtp_encode_packet(void* param, const void* packet, int bytes, uint32_
 
 static int rtp_decode_packet(void* param, const void* packet, int bytes, uint32_t timestamp, int flags)
 {
-    static const uint8_t start_code[4] = { 0, 0, 0, 1 };
     struct RtpContext* ctx = (struct RtpContext*)param;
+    static const uint8_t start_code[4] = { 0, 0, 0, 1 };
 
     static uint8_t buffer[2 * 1024 * 1024];
-    assert(bytes + 4 < sizeof(buffer));
-    assert(0 == flags);
 
     size_t size = 0;
     if (0 == strcmp("H264", ctx->format) || 0 == strcmp("H265", ctx->format))
@@ -110,23 +109,25 @@ static int rtp_decode_packet(void* param, const void* packet, int bytes, uint32_
     printf("Get nalu: bytes:%d, timestamp:%u\n", size, timestamp);
     // TODO:
     // check media file
-    fwrite(buffer, 1, size, ctx->out_file);
+    fwrite(buffer, 1, size, ctx->outFile);
 }
 
 // 发送H264 RTP over UDP
-#define DEST_IP              "192.168.205.128"      // 支持成对方的ip地址
+#define DEST_IP              "192.168.205.128"  // 支持成对方的ip地址
 #define DEST_PORT            9832   //端口号
 
-// ffplay播放 ffplay h264.sdp -protocol_whitelist "file,http,https,rtp,udp,tcp,tls"
+// ffplay播放 ffplay h264.sdp -protocol_whitelist "file,http,https,rtp,udp,tcp,tls" -loglevel 58
 
 int main()
 {
+    //1.打开本地文件，这个文件是要实时发送的
     FILE *bits = open_bitstream_file("phone.h264"); 
     if(!bits)
     {
         printf("open file failed\n");
         return -1;
     }
+    //2.解包后保存的裸流文件，主要测试对比h264文件是否一致
     FILE *out_file = fopen("out.h264", "wb");
     if(!out_file)
     {
@@ -138,8 +139,8 @@ int main()
     struct RtpContext rtpCtx;     // 封装的测试 带H264 RTP封装和解封装
     memset(&rtpCtx, 0, sizeof(struct RtpContext));
 
-    rtpCtx.in_file = bits;         // 输入文件
-    rtpCtx.out_file = out_file;    // 输出文件
+    rtpCtx.inFile = bits;         // 输入文件
+    rtpCtx.outFile = out_file;    // 输出文件
 
     // H264 RTP encode回调
     struct rtp_payload_t handler_rtp_encode_h264;
@@ -159,12 +160,14 @@ int main()
     rtpCtx.decoder_h264 = rtp_payload_decode_create(rtpCtx.payloadType, rtpCtx.format, &handler_rtp_decode_h264, &rtpCtx);
 
 
+    // 处理时间戳
     rtpCtx.frame_rate = 25;
     unsigned int timestamp_increse = 0;
     unsigned int ts_current = 0;
     timestamp_increse = (unsigned int)(90000.0 / rtpCtx.frame_rate);  //时间戳的增量（每帧的采样点数） 采样率/帧率
 
 
+    // 处理socket通信
     rtpCtx.addr.sin_family = AF_INET;
     rtpCtx.addr.sin_addr.s_addr = inet_addr(DEST_IP);
     rtpCtx.addr.sin_port = htons(DEST_PORT);
@@ -173,7 +176,7 @@ int main()
     int ret = fcntl(rtpCtx.fd , F_GETFL , 0);
     fcntl(rtpCtx.fd , F_SETFL , ret | O_NONBLOCK);
 #endif
-    rtpCtx.addr_size =sizeof(rtpCtx.addr);
+    rtpCtx.addrSize =sizeof(rtpCtx.addr);
     // connect(rtpCtx.fd, (const sockaddr *)&rtpCtx.addr, len) ;//申请UDP套接字
 
 
@@ -202,7 +205,6 @@ int main()
                                 rtpCtx.payloadType, 90000, 300000);
                 rtpCtx.got_sps_pps = 1;            // 只发送一次
             }
-
         }
 
         // 这里是输入一个nalu，去进行RTP封包
@@ -216,6 +218,6 @@ int main()
     }
 
     printf("close file\n");
-    fclose(rtpCtx.in_file);
-    fclose(rtpCtx.out_file);
+    fclose(rtpCtx.inFile);
+    fclose(rtpCtx.outFile);
 }

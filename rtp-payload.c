@@ -1,22 +1,16 @@
 ﻿#include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 #include "rtp-payload.h"
-//#include "rtp-profile.h"
+#include "rtp-profile.h"
 #include "rtp-packet.h"
 #include "rtp-payload-internal.h"
 
 #define TS_PACKET_SIZE 188
 
-// struct rtp_payload_delegate_t     // 代理结构体 一层接口
-// {
-//     struct rtp_payload_encode_t* encoder;  // 二层接口，有四个函数，可以重入
-//     struct rtp_payload_decode_t* decoder;
-//     void* packer; // 根据实际情况，来决定是封包器，还是解包器
-// };
+// 一层  代理接口
 
 /// @return 0-ok, <0-error
-static int rtp_payload_find(int payloadType, const char* format, struct rtp_payload_delegate_t* delegateCtx);
+static int rtp_payload_find(int payloadType, const char* format, struct RtpPayloadDelagate* delegateCtx);
 
 /**
  * @brief rtp_payload_encode_create
@@ -31,7 +25,7 @@ static int rtp_payload_find(int payloadType, const char* format, struct rtp_payl
 void* rtp_payload_encode_create(int payloadType, const char* name, uint16_t seq, uint32_t ssrc, struct rtp_payload_t *handler, void* cbparam)
 {
     int size;
-    struct rtp_payload_delegate_t* delegateCtx;
+    struct RtpPayloadDelagate* delegateCtx;
 
     delegateCtx = calloc(1, sizeof(*delegateCtx));
     if (delegateCtx)
@@ -49,31 +43,32 @@ void* rtp_payload_encode_create(int payloadType, const char* name, uint16_t seq,
 
 void rtp_payload_encode_destroy(void* encoder)
 {
-    struct rtp_payload_delegate_t* delegateCtx;
-    delegateCtx = (struct rtp_payload_delegate_t*)encoder;
+    struct RtpPayloadDelagate* delegateCtx;
+    delegateCtx = (struct RtpPayloadDelagate*)encoder;
     delegateCtx->encoder->destroy(delegateCtx->packer);
     free(delegateCtx);
 }
 
 void rtp_payload_encode_getinfo(void* encoder, uint16_t* seq, uint32_t* timestamp)
 {
-    struct rtp_payload_delegate_t* delegateCtx;
-    delegateCtx = (struct rtp_payload_delegate_t*)encoder;
+    struct RtpPayloadDelagate* delegateCtx;
+    delegateCtx = (struct RtpPayloadDelagate*)encoder;
     delegateCtx->encoder->get_info(delegateCtx->packer, seq, timestamp);
 }
 
 /**
  * @brief rtp_payload_encode_input 这里是通用的接口   在这里注册了重要的回调函数
  * @param encoder
- * @param data      data具体是什么媒体类型的数据，接口不关注，具体由ctx->encoder->input去处理 (rtp_h264_pack_input)
+ * @param data      data具体是什么媒体类型的数据，接口不关注，具体由ctx->encoder->input去处理 （比如rtp_h264_pack_input)
  * @param bytes
  * @param timestamp
  * @return
  */
 int rtp_payload_encode_input(void* encoder, const void* data, int bytes, uint32_t timestamp)
 {
-    struct rtp_payload_delegate_t* delegateCtx;
-    delegateCtx = (struct rtp_payload_delegate_t*)encoder;
+    struct RtpPayloadDelagate* delegateCtx;
+    delegateCtx = (struct RtpPayloadDelagate*)encoder;
+    
     return delegateCtx->encoder->input(delegateCtx->packer, data, bytes, timestamp);
 }
 
@@ -82,7 +77,7 @@ int rtp_payload_encode_input(void* encoder, const void* data, int bytes, uint32_
 
 void* rtp_payload_decode_create(int payloadType, const char* name, struct rtp_payload_t *handler, void* cbparam)
 {
-    struct rtp_payload_delegate_t* delegateCtx;
+    struct RtpPayloadDelagate* delegateCtx;
     delegateCtx = calloc(1, sizeof(*delegateCtx));
     if (delegateCtx)
     {
@@ -98,16 +93,16 @@ void* rtp_payload_decode_create(int payloadType, const char* name, struct rtp_pa
 
 void rtp_payload_decode_destroy(void* decoder)
 {
-    struct rtp_payload_delegate_t* delegateCtx;
-    delegateCtx = (struct rtp_payload_delegate_t*)decoder;
+    struct RtpPayloadDelagate* delegateCtx;
+    delegateCtx = (struct RtpPayloadDelagate*)decoder;
     delegateCtx->decoder->destroy(delegateCtx->packer);
     free(delegateCtx);
 }
 
 int rtp_payload_decode_input(void* decoder, const void* packet, int bytes)
 {
-    struct rtp_payload_delegate_t* delegateCtx;
-    delegateCtx = (struct rtp_payload_delegate_t*)decoder;
+    struct RtpPayloadDelagate* delegateCtx;
+    delegateCtx = (struct RtpPayloadDelagate*)decoder;
     return delegateCtx->decoder->input(delegateCtx->packer, packet, bytes);
 }
 
@@ -129,7 +124,7 @@ int rtp_packet_getsize()
 
 
 // 注册delegateCtx中的两个结构体rtp_payload_encode_t、rtp_payload_decode_t
-static int rtp_payload_find(int payloadType, const char* format, struct rtp_payload_delegate_t* delegateCtx)
+static int rtp_payload_find(int payloadType, const char* format, struct RtpPayloadDelagate* delegateCtx)
 {
     if (payloadType >= 96 && format)
     {

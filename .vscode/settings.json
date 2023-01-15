@@ -4,6 +4,10 @@
         "rtp-util.h": "c",
         "h264-util.h": "c",
         "rtp-payload.h": "c",
-        "rtp-header.h": "c"
+        "rtp-header.h": "c",
+        "rtp-profile.h": "c",
+        "rtp-packet.h": "c",
+        "rtp-payload-helper.h": "c",
+        "rtp-payload-internal.h": "c"
     }
 }
