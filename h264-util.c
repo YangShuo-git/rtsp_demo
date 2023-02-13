@@ -85,31 +85,31 @@ int get_annexb_nalu (nalu_t *nalu, FILE *bits)
         }
         else
         {
-            //如果是0x00000001,则起始码为4个字节
+            //如果是0x00000001,则第一个起始码为4个字节
             pos = 4;
             nalu->startCodeLen = 4;
         }
     }
     else
     {
-        //如果是0x000001,则起始码为3个字节
+        //如果是0x000001,则第一个起始码为3个字节
         pos = 3;
         nalu->startCodeLen = 3;
     }
 
-    //继续查找下一个起始码（是在下面的while循环中不停地找）
+    // 继续查找下一个起始码（是在下面的while循环中不停地找）
     isStartCode3 = 0;
     isStartCode4 = 0;
     
     while (!nextStartCodeFound)
     {
-        if (feof (bits))//判断是否到了文件尾，文件结束，则返回非0值，否则返回0
+        if (feof (bits))// 判断是否到了文件尾，文件结束，则返回非0值，否则返回0
         {
-            nalu->len = (pos - 1);  //NALU单元的长度。
+            nalu->len = (pos - 1);  // 起始码+裸nalu 的长度
             memcpy (nalu->buf, tmpBuf, nalu->len);
-            nalu->forbidden_bit = nalu->buf[nalu->startCodeLen] & 0x80;     // 1 bit
-            nalu->nal_reference_idc = nalu->buf[nalu->startCodeLen] & 0x60; // 2 bit
-            nalu->nal_unit_type = (nalu->buf[nalu->startCodeLen]) & 0x1f;   // 5 bit
+            nalu->forbidden_bit = nalu->buf[nalu->startCodeLen] & 0x80;     
+            nalu->nal_reference_idc = nalu->buf[nalu->startCodeLen] & 0x60; 
+            nalu->nal_unit_type = (nalu->buf[nalu->startCodeLen]) & 0x1f;   
             free(tmpBuf);
             return pos-1;
         }
@@ -124,28 +124,27 @@ int get_annexb_nalu (nalu_t *nalu, FILE *bits)
         nextStartCodeFound = (isStartCode3 == 1 || isStartCode4 == 1);
     }
 
-    // Here, we have found another start code (and read length of startcode bytes more than we should have.)
-    // Hence, go back in the file
+    // 已经找到了下一个起始码，并且是将其读了出来，计算上一个nalu的长度时，要将其减去
     rewind = (isStartCode4 == 1)? -4 : -3;
 
-    if (0 != fseek (bits, rewind, SEEK_CUR))//把文件指针指向前一个NALU的末尾，文件指针需要偏移rewind。
+    if (0 != fseek (bits, rewind, SEEK_CUR)) //把文件指针指向前一个NALU的末尾，文件指针需要偏移rewind。
     {
         free(tmpBuf);
         printf("get_annexb_nalu: Cannot fseek in the bit stream file");
     }
 
-    // Here the Start code, the complete NALU, and the next start code is in the buf.
-    // The size of buf is pos, pos+rewind are the number of bytes excluding the next
-    // start code, and (pos+rewind)-startCodeLen is the size of the NALU excluding the start code
-    nalu->len = (pos + rewind);    //NALU长度，不包括下一个起始码。偏移rewind个位置
+    // pos：起始码+裸nalu+下一个起始码 的长度
+    // pos+rewind：起始码+裸nalu 的长度
+    // (pos+rewind)-startCodeLen ：裸nalu 的长度
+    nalu->len = (pos + rewind);
     memcpy (nalu->buf, tmpBuf, nalu->len); //拷贝一个完整NALU，不包含下一个起始码
 
-    nalu->forbidden_bit = nalu->buf[nalu->startCodeLen] & 0x80;     // 1 bit
-    nalu->nal_reference_idc = nalu->buf[nalu->startCodeLen] & 0x60; // 2 bit
-    nalu->nal_unit_type = (nalu->buf[nalu->startCodeLen]) & 0x1f;   // 5 bit
+    nalu->forbidden_bit = nalu->buf[nalu->startCodeLen] & 0x80;     // 0x1000 0000
+    nalu->nal_reference_idc = nalu->buf[nalu->startCodeLen] & 0x60; // 0x0110 0000
+    nalu->nal_unit_type = (nalu->buf[nalu->startCodeLen]) & 0x1f;   // 0x0001 1111
     free(tmpBuf);
 
-    return (pos + rewind); //返回两个起始码之间的字节数，即包含有起始码的NALU的长度
+    return (pos + rewind); // 起始码+裸nalu 的长度
 }
 
 static int find_start_code_3 (unsigned char *buf)

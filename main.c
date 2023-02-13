@@ -113,7 +113,7 @@ static int rtp_decode_packet(void* param, const void* packet, int bytes, uint32_
 }
 
 // 发送H264 RTP over UDP
-#define DEST_IP              "192.168.205.128"  // 支持成对方的ip地址
+#define DEST_IP              "192.168.192.14"  // 支持成对方的ip地址
 #define DEST_PORT            9832   //端口号
 
 // ffplay播放 ffplay h264.sdp -protocol_whitelist "file,http,https,rtp,udp,tcp,tls" -loglevel 58
@@ -181,7 +181,7 @@ int main()
 
 
     oneNalu = alloc_nalu(2000000); //为nalu_t及其成员buf分配空间，2M分配给了buf。返回值为指向nalu_t存储空间的指针
-    // 这里为什么会分配2M内存呢？
+    // 这里为什么是2M内存呢？
 
     while(!feof(bits))  //如果文件到头，则返回非0值；文件没有到头，返回0
     {
@@ -199,11 +199,11 @@ int main()
             rtpCtx.pps_len = oneNalu->len - oneNalu->startCodeLen;
             if(!rtpCtx.got_sps_pps)
             {
-                h264_sdp_create("h264.sdp", DEST_IP, DEST_PORT,
+                h264_sdp_create("h264.sdp", DEST_IP , DEST_PORT,
                                 rtpCtx.sps, rtpCtx.sps_len,
                                 rtpCtx.pps, rtpCtx.pps_len,
                                 rtpCtx.payloadType, 90000, 300000);
-                rtpCtx.got_sps_pps = 1;            // 只发送一次
+                rtpCtx.got_sps_pps = 1;            // 只发送一次SDP
             }
         }
 
