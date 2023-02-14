@@ -30,7 +30,7 @@ struct RtpContext
     FILE* inFile;                  // H264裸流文件
     float frame_rate;               // 帧率  是手动设置的
 
-    void* encoder_h264;             // 代理封装结构体
+    void* encoder_h264;             // 代理封装结构体  后续改为muxer和demuxer
     void* decoder_h264;             // 代理解封装结构体
 
     char *outFileName;
@@ -146,17 +146,20 @@ int main()
     struct rtp_payload_t handler_rtp_encode_h264;
     handler_rtp_encode_h264.alloc = rtp_alloc;
     handler_rtp_encode_h264.free = rtp_free;
-    handler_rtp_encode_h264.packet = rtp_encode_packet;
+    handler_rtp_encode_h264.packetCallback = rtp_encode_packet;
 
-    rtpCtx.payloadType = 96;  // 采用PS解复用，将音视频分开解码
-    rtpCtx.format = "H264";
-    rtpCtx.encoder_h264 = rtp_payload_encode_create(rtpCtx.payloadType, rtpCtx.format, 1, 0x12345678, &handler_rtp_encode_h264, &rtpCtx);
+    rtpCtx.payloadType = 96;  // 载荷是H264
+    rtpCtx.format = "H264";   // H.264 video (MPEG-4 Part 10) (RFC 6184)
+    uint16_t seq = 1;
+    uint32_t ssrc = 0x12345678;
+    // 创建代理结构体 delegateCtx
+    rtpCtx.encoder_h264 = rtp_payload_encode_create(rtpCtx.payloadType, rtpCtx.format, seq, ssrc, &handler_rtp_encode_h264, &rtpCtx);
 
     // H264 RTP decode回调
     struct rtp_payload_t handler_rtp_decode_h264;
     handler_rtp_decode_h264.alloc = rtp_alloc;
     handler_rtp_decode_h264.free = rtp_free;
-    handler_rtp_decode_h264.packet = rtp_decode_packet;
+    handler_rtp_decode_h264.packetCallback = rtp_decode_packet;
     rtpCtx.decoder_h264 = rtp_payload_decode_create(rtpCtx.payloadType, rtpCtx.format, &handler_rtp_decode_h264, &rtpCtx);
 
 

@@ -101,7 +101,7 @@ static int rtp_h264_unpack_stap(struct rtp_decode_h264_t *unpacker, const uint8_
         }
 
         assert(H264_NAL(ptr[2]) > 0 && H264_NAL(ptr[2]) < 24);
-        r = unpacker->handler.packet(unpacker->cbparam, ptr + 2, len, timestamp, unpacker->flags);
+        r = unpacker->handler.packetCallback(unpacker->cbparam, ptr + 2, len, timestamp, unpacker->flags);
         unpacker->flags = 0;
         unpacker->size = 0;
 
@@ -176,7 +176,7 @@ static int rtp_h264_unpack_mtap(struct rtp_decode_h264_t *unpacker, const uint8_
         ts += timestamp; // wrap 1 << 32
 
         assert(H264_NAL(ptr[n + 3]) > 0 && H264_NAL(ptr[n + 3]) < 24);
-        r = unpacker->handler.packet(unpacker->cbparam, ptr + 1 + n, len - 1 - n, ts, unpacker->flags);
+        r = unpacker->handler.packetCallback(unpacker->cbparam, ptr + 1 + n, len - 1 - n, ts, unpacker->flags);
         unpacker->flags = 0;
         unpacker->size = 0;
 
@@ -270,7 +270,7 @@ static int rtp_h264_unpack_fu(struct rtp_decode_h264_t *unpacker, const uint8_t*
     if(FU_END(fuheader))
     {
         if(unpacker->size > 0)      // 多次传入数据后等到FU_END的时候难道一个完整的nalu
-            r = unpacker->handler.packet(unpacker->cbparam, unpacker->ptr, unpacker->size, timestamp, unpacker->flags);
+            r = unpacker->handler.packetCallback(unpacker->cbparam, unpacker->ptr, unpacker->size, timestamp, unpacker->flags);
         unpacker->flags = 0;
         unpacker->size = 0; // reset
     }
@@ -326,7 +326,7 @@ static int rtp_h264_unpack_input(void* p, const void* packet, int bytes)
         return rtp_h264_unpack_fu(unpacker, (const uint8_t*)pkt.payload, pkt.payloadlen, pkt.header.timestamp, 1);
 
     default: // 1-23 NAL unit
-        r = unpacker->handler.packet(unpacker->cbparam, (const uint8_t*)pkt.payload, pkt.payloadlen, pkt.header.timestamp, unpacker->flags);
+        r = unpacker->handler.packetCallback(unpacker->cbparam, (const uint8_t*)pkt.payload, pkt.payloadlen, pkt.header.timestamp, unpacker->flags);
         unpacker->flags = 0;
         unpacker->size = 0;
         return 0 == r ? 1 : r; // packet handled

@@ -122,7 +122,7 @@ int rtp_payload_onframe(struct rtp_payload_helper_t *helper)
         )
     {
         // previous packet done
-        r = helper->handler.packet(helper->cbparam, helper->ptr, helper->size, helper->timestamp, helper->__flags | (helper->lost ? RTP_PAYLOAD_FLAG_PACKET_CORRUPT : 0));
+        r = helper->handler.packetCallback(helper->cbparam, helper->ptr, helper->size, helper->timestamp, helper->__flags | (helper->lost ? RTP_PAYLOAD_FLAG_PACKET_CORRUPT : 0));
 
         // RTP_PAYLOAD_FLAG_PACKET_LOST: miss
         helper->__flags &= ~RTP_PAYLOAD_FLAG_PACKET_LOST; // clear packet lost flag

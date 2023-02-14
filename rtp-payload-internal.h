@@ -11,10 +11,10 @@
 struct rtp_payload_encode_t   
 {
     /// create RTP packer 创建一个RTP封装器
-    /// @param[in] size maximum RTP packet payload size(don't include RTP header)
+    /// @param[in] size    maximum RTP packet payload size(don't include RTP header)
     /// @param[in] payload RTP header PT filed (see more about rtp-profile.h)
-    /// @param[in] seq RTP header sequence number filed
-    /// @param[in] ssrc RTP header SSRC filed
+    /// @param[in] seq     RTP header sequence number filed
+    /// @param[in] ssrc    RTP header SSRC filed
     /// @param[in] handler user-defined callback
     /// @param[in] cbparam user-defined parameter
     /// @return RTP packer

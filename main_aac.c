@@ -141,7 +141,7 @@ int main1()
     struct rtp_payload_t handler_rtp_encode_aac;
     handler_rtp_encode_aac.alloc = rtp_alloc;
     handler_rtp_encode_aac.free = rtp_free;
-    handler_rtp_encode_aac.packet = rtp_encode_packet;
+    handler_rtp_encode_aac.packetCallback = rtp_encode_packet;
 
     rtpCtx.payloadType = 97;  
     rtpCtx.format = "mpeg4-generic";
@@ -151,7 +151,7 @@ int main1()
     struct rtp_payload_t handler_rtp_decode_aac;
     handler_rtp_decode_aac.alloc = rtp_alloc;
     handler_rtp_decode_aac.free = rtp_free;
-    handler_rtp_decode_aac.packet = rtp_decode_packet;
+    handler_rtp_decode_aac.packetCallback = rtp_decode_packet;
     rtpCtx.decoder_aac = rtp_payload_decode_create(rtpCtx.payloadType, rtpCtx.format, &handler_rtp_decode_aac, &rtpCtx);
 
 

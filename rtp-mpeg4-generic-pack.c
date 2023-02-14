@@ -129,7 +129,7 @@ static int rtp_mpeg4_generic_pack_input(void* pack, const void* data, int bytes,
 
         memcpy(rtp + n, header, N_AU_HEADER);   // N_AU_HEADER为什么是4， AU_HEADER_LENGTH AU_HEADER
         memcpy(rtp + n + N_AU_HEADER, packer->pkt.payload, packer->pkt.payloadlen); // 封装payload
-        r = packer->handler.packet(packer->cbparam, rtp, n + N_AU_HEADER + packer->pkt.payloadlen, packer->pkt.header.timestamp, 0);
+        r = packer->handler.packetCallback(packer->cbparam, rtp, n + N_AU_HEADER + packer->pkt.payloadlen, packer->pkt.header.timestamp, 0);
         packer->handler.free(packer->cbparam, rtp);
     }
 

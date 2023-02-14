@@ -110,7 +110,7 @@ static int rtp_h264_pack_nalu(struct RtpH264Packer *packer, const uint8_t* nalu,
     }
 
     ++packer->pkt.header.seq;
-    r = packer->handler.packet(packer->cbparam, rtp, len, packer->pkt.header.timestamp, 0); // 通过packet回调函数把封包好的rtp包发送到应用层
+    r = packer->handler.packetCallback(packer->cbparam, rtp, len, packer->pkt.header.timestamp, 0); // 通过packet回调函数把封包好的rtp包发送到应用层
     packer->handler.free(packer->cbparam, rtp);
     return r;
 }
@@ -162,7 +162,7 @@ static int rtp_h264_pack_fu_a(struct RtpH264Packer *packer, const uint8_t* nalu,
         rtp[n + 1] = fu_header;
         memcpy(rtp + n + N_FU_HEADER, packer->pkt.payload, packer->pkt.payloadlen);
         // packer->cbparam用户的参数
-        r = packer->handler.packet(packer->cbparam, rtp, n + N_FU_HEADER + packer->pkt.payloadlen, packer->pkt.header.timestamp, 0);
+        r = packer->handler.packetCallback(packer->cbparam, rtp, n + N_FU_HEADER + packer->pkt.payloadlen, packer->pkt.header.timestamp, 0);
         packer->handler.free(packer->cbparam, rtp);
 
         bytes -= packer->pkt.payloadlen;

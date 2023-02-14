@@ -15,14 +15,14 @@ static int rtp_payload_find(int payloadType, const char* format, struct RtpPaylo
 /**
  * @brief rtp_payload_encode_create
  * @param payloadType  媒体的类型  96是采用PS解复用，将音视频分开解码；98是直接按照H264的解码类型解码
- * @param name     编码器名字 H264/H265
+ * @param format       编码器格式 H264/H265
  * @param seq
  * @param ssrc
  * @param handler
  * @param cbparam
  * @return
  */
-void* rtp_payload_encode_create(int payloadType, const char* name, uint16_t seq, uint32_t ssrc, struct rtp_payload_t *handler, void* cbparam)
+void* rtp_payload_encode_create(int payloadType, const char* format, uint16_t seq, uint32_t ssrc, struct rtp_payload_t *handler, void* cbparam)
 {
     int size;
     struct RtpPayloadDelagate* delegateCtx;
@@ -31,8 +31,8 @@ void* rtp_payload_encode_create(int payloadType, const char* name, uint16_t seq,
     if (delegateCtx)
     {
         size = rtp_packet_getsize();
-        if (rtp_payload_find(payloadType, name, delegateCtx) < 0   // 其实就是注册代理结构体里的结构体encoder、decoder（二层接口，可重入）
-            || NULL == (delegateCtx->packer = delegateCtx->encoder->create(size, (uint8_t)payloadType, seq, ssrc, handler, cbparam)))
+        if (rtp_payload_find(payloadType, format, delegateCtx) < 0   // 其实就是注册代理结构体里的结构体encoder、decoder（二层接口，可重入）
+            || NULL == (delegateCtx->packer = delegateCtx->encoder->create(size, (uint8_t)payloadType, seq, ssrc, handler, cbparam))) // 这个是创建封包器packer
         {
             free(delegateCtx);
             return NULL;
@@ -57,7 +57,7 @@ void rtp_payload_encode_getinfo(void* encoder, uint16_t* seq, uint32_t* timestam
 }
 
 /**
- * @brief rtp_payload_encode_input 这里是通用的接口   在这里注册了重要的回调函数
+ * @brief rtp_payload_encode_input 这里是通用的接口
  * @param encoder
  * @param data      data具体是什么媒体类型的数据，接口不关注，具体由ctx->encoder->input去处理 （比如rtp_h264_pack_input)
  * @param bytes
@@ -75,13 +75,13 @@ int rtp_payload_encode_input(void* encoder, const void* data, int bytes, uint32_
 
 
 
-void* rtp_payload_decode_create(int payloadType, const char* name, struct rtp_payload_t *handler, void* cbparam)
+void* rtp_payload_decode_create(int payloadType, const char* format, struct rtp_payload_t *handler, void* cbparam)
 {
     struct RtpPayloadDelagate* delegateCtx;
     delegateCtx = calloc(1, sizeof(*delegateCtx));
     if (delegateCtx)
     {
-        if (rtp_payload_find(payloadType, name, delegateCtx) < 0
+        if (rtp_payload_find(payloadType, format, delegateCtx) < 0
             || NULL == (delegateCtx->packer = delegateCtx->decoder->create(handler, cbparam)))
         {
             free(delegateCtx);
@@ -123,14 +123,13 @@ int rtp_packet_getsize()
 }
 
 
-// 注册delegateCtx中的两个结构体rtp_payload_encode_t、rtp_payload_decode_t
+// 对delegateCtx中的两个结构体rtp_payload_encode_t、rtp_payload_decode_t进行注册
 static int rtp_payload_find(int payloadType, const char* format, struct RtpPayloadDelagate* delegateCtx)
 {
     if (payloadType >= 96 && format)
     {
         if (0 == strcasecmp(format, "H264"))
         {
-            // H.264 video (MPEG-4 Part 10) (RFC 6184)
             delegateCtx->encoder = rtp_h264_encode();
             delegateCtx->decoder = rtp_h264_decode();
         }

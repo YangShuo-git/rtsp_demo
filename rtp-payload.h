@@ -1,8 +1,6 @@
 ﻿#ifndef _rtp_payload_h_
 #define _rtp_payload_h_
 
-// https://en.wikipedia.org/wiki/RTP_audio_video_profile
-
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -14,22 +12,22 @@ extern "C" {
 #define RTP_PAYLOAD_FLAG_PACKET_CORRUPT 0x0200 // the packet data is corrupt
 
 
-// 不管封包还是解包，调用者都是通过该结构体的回调函数来获取对应数据（重要的结构体）
+// 不管封包还是解包，调用者都是通过该结构体的回调函数来获取对应数据
 struct rtp_payload_t
 {
     void* (*alloc)(void* param, int bytes);
     void (*free)(void* param, void *packet);
 
-    /// @return 0-ok, other-error       拿到一帧完整的数据  回调函数 （packetCallback）
-    int (*packet)(void* param, const void *packet, int bytes, uint32_t timestamp, int flags);
+    /// @return 0-ok, other-error    在最外层定义的回调函数，拿到一帧完整的数据
+    int (*packetCallback)(void* param, const void *packet, int bytes, uint32_t timestamp, int flags);
 };
 
-// 代理结构体 一层接口
+// 一层接口 代理结构体  其实代理的是封包、解包的结构体
 struct RtpPayloadDelagate     
 {
-    struct rtp_payload_encode_t* encoder;  // 二层接口，有四个函数，可以重入 封包结构体
+    struct rtp_payload_encode_t* encoder;  // 二层接口，封包结构体，有四个函数，可以重入 
     struct rtp_payload_decode_t* decoder;
-    void* packer; // 这是已经封好的包
+    void* packer; // 封包
 };
 
 /// Create RTP packet encoder，创建不同的封装器，是最外层的调用接口 (H264 nalu -> RTP; AAC -> RTP)
